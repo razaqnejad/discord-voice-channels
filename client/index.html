@@ -17,7 +17,7 @@
     <ul id="userList"></ul>
 
     <script>
-        const socket = io("http://localhost:3000");
+        const socket = io("https://discord-voice-server.vercel.app"); // آدرس سرور Vercel
         let peers = {}; // ذخیره Peerهای متصل
         let isMuted = false;
         let currentChannel = null;
