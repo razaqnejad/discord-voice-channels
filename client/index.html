@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Voice Chat</title>
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js"></script>
+</head>
+<body>
+    <h1>Voice Chat</h1>
+    <input type="text" id="channelId" placeholder="Enter channel ID">
+    <button onclick="joinChannel()">Join Channel</button>
+    <button onclick="leaveChannel()">Leave Channel</button>
+    <button onclick="toggleMute()">Mute/Unmute</button>
+    <h2>Users in Channel:</h2>
+    <ul id="userList"></ul>
+
+    <script>
+        const socket = io("http://localhost:3000");
+        let peers = {}; // ذخیره Peerهای متصل
+        let isMuted = false;
+        let currentChannel = null;
+
+        function joinChannel() {
+            currentChannel = document.getElementById("channelId").value;
+            socket.emit("join-channel", currentChannel);
+        }
+
+        function leaveChannel() {
+            socket.emit("leave-channel");
+            Object.values(peers).forEach(peer => peer.destroy());
+            peers = {};
+            currentChannel = null;
+        }
+
+        // دریافت صدا از میکروفون و ارسال به کاربران دیگر
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+            const audio = document.createElement("audio");
+            audio.srcObject = stream;
+            audio.autoplay = true;
+            document.body.appendChild(audio);
+            let isMuted = false;
+
+            const audioContext = new AudioContext();
+            const analyser = audioContext.createAnalyser();
+            analyser.fftSize = 512;
+            const microphone = audioContext.createMediaStreamSource(stream);
+            microphone.connect(analyser);
+
+            setInterval(() => {
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                analyser.getByteFrequencyData(dataArray);
+                const volume = dataArray.reduce((a, b) => a + b) / dataArray.length;
+
+                const isSpeaking = volume > 10;
+                socket.emit("user-speaking", { userId: socket.id, isSpeaking });
+            }, 300);
+
+            function createPeer(userId, initiator) {
+                if (peers[userId]) return peers[userId];
+
+                const peer = new SimplePeer({ initiator, trickle: false, stream });
+
+                peer.on("signal", signal => {
+                    socket.emit("webrtc-signal", { signal, to: userId });
+                });
+
+                peer.on("stream", userStream => {
+                    const audio = document.createElement("audio");
+                    audio.srcObject = userStream;
+                    audio.autoplay = true;
+                    document.body.appendChild(audio);
+                });
+
+                peer.on("close", () => {
+                    delete peers[userId];
+                });
+
+                peers[userId] = peer;
+                return peer;
+            }
+
+            socket.on("update-users", (data) => {
+                const userList = document.getElementById("userList");
+                userList.innerHTML = "";
+                data.users.forEach(user => {
+                    if (user !== socket.id && !peers[user]) {
+                        createPeer(user, true);
+                    }
+                    const li = document.createElement("li");
+                    li.textContent = user;
+                    li.id = `user-${user}`;
+                    userList.appendChild(li);
+                });
+            });
+
+            socket.on("user-speaking", ({ userId, isSpeaking }) => {
+                const userElement = document.getElementById(`user-${userId}`);
+                if (userElement) {
+                    userElement.style.color = isSpeaking ? "green" : "black";
+                }
+            });
+
+            socket.on("webrtc-signal", ({ signal, from }) => {
+                if (!peers[from]) {
+                    createPeer(from, false);
+                }
+                peers[from].signal(signal);
+            });
+        }).catch(err => console.error("Error accessing microphone:", err));
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            Object.values(peers).forEach(peer => {
+                peer.stream.getAudioTracks()[0].enabled = !isMuted;
+            });
+        }
+
+
+        window.addEventListener("beforeunload", () => {
+            socket.emit("leave-channel");
+        });
+    </script>
+</body>
+</html>
