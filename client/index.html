@@ -79,8 +79,10 @@
         }
 
         function createPeer(userId, initiator) {
-            if (peers[userId]) return peers[userId];
-
+            if (peers[userId]) {
+                console.warn(`Peer for ${userId} already exists. Skipping creation.`);
+                return peers[userId];
+            }
             console.log(`🔗 Creating WebRTC Peer: ${userId}`);
 
             const peer = new SimplePeer({
@@ -113,6 +115,14 @@
                 }).catch(e => {
                     console.error("⚠️ Audio play error:", e);
                 });
+            });
+
+            peer.on("iceConnectionStateChange", () => {
+                console.log(`ICE state changed: ${peer.iceConnectionState}`);
+                if (peer.iceConnectionState === "failed") {
+                    console.error(`ICE connection failed for ${userId}. Restarting...`);
+                    peer.reconnect();
+                }
             });
 
             peer.on("close", () => {
