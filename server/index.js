@@ -69,9 +69,10 @@ io.on("connection", (socket) => {
   });
 
   socket.on("user-speaking", (data) => {
+    console.log(`Received user-speaking: ${data.userId} isSpeaking: ${data.isSpeaking}`);
     const channelId = users[socket.id];
     if (channelId) {
-      io.to(channelId).emit("user-speaking", data);
+        io.to(channelId).emit("user-speaking", data);
     }
   });
 });

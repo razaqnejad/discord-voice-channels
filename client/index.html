@@ -31,20 +31,38 @@
         async function getMicrophoneStream() {
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                console.log("🎤 Microphone access granted.");
+                console.log("Microphone access granted.");
 
                 const audio = document.createElement("audio");
                 audio.srcObject = stream;
                 audio.autoplay = true;
                 document.body.appendChild(audio);
 
+                // پردازش صدا برای تشخیص صحبت کردن
+                const audioContext = new AudioContext();
+                const analyser = audioContext.createAnalyser();
+                analyser.fftSize = 512;
+                const microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyser);
+
+                setInterval(() => {
+                    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                    analyser.getByteFrequencyData(dataArray);
+                    const volume = dataArray.reduce((a, b) => a + b) / dataArray.length;
+
+                    console.log(`Volume Level: ${volume}`); // نمایش مقدار volume در کنسول
+                    const isSpeaking = volume > 10; // مقدار ممکن است خیلی پایین باشد، می‌توان افزایش داد
+                    socket.emit("user-speaking", { userId: socket.id, isSpeaking });
+                }, 300);
+
                 return stream;
             } catch (error) {
-                console.error("🚨 Microphone access denied:", error);
-                alert("⚠️ Please allow microphone access to use voice chat.");
+                console.error("Microphone access denied:", error);
+                alert("Please allow microphone access to use voice chat.");
                 return null;
             }
         }
+
 
         async function joinChannel() {
             currentChannel = document.getElementById("channelId").value;
@@ -126,6 +144,7 @@
         });
 
         socket.on("user-speaking", ({ userId, isSpeaking }) => {
+            console.log(`User ${userId} is speaking: ${isSpeaking}`);
             const userElement = document.getElementById(`user-${userId}`);
             if (userElement) {
                 userElement.style.color = isSpeaking ? "green" : "black";
