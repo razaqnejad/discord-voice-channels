@@ -25,13 +25,13 @@
         let peers = {}; // ذخیره Peerهای متصل
         let isMuted = false;
         let currentChannel = null;
-        let stream = null; // تعریف متغیر برای ذخیره جریان صوتی
+        let stream = null; // ذخیره جریان صوتی
 
         // دریافت صدا از میکروفون
         async function getMicrophoneStream() {
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                console.log("Microphone access granted.");
+                console.log("🎤 Microphone access granted.");
 
                 const audio = document.createElement("audio");
                 audio.srcObject = stream;
@@ -40,8 +40,8 @@
 
                 return stream;
             } catch (error) {
-                console.error("Microphone access denied:", error);
-                alert("Please allow microphone access to use voice chat.");
+                console.error("🚨 Microphone access denied:", error);
+                alert("⚠️ Please allow microphone access to use voice chat.");
                 return null;
             }
         }
@@ -49,7 +49,7 @@
         async function joinChannel() {
             currentChannel = document.getElementById("channelId").value;
             if (!currentChannel) {
-                alert("Please enter a channel ID.");
+                alert("⚠️ Please enter a channel ID.");
                 return;
             }
 
@@ -69,23 +69,23 @@
         }
 
         function createPeer(userId, initiator) {
-            if (peers[userId]) return peers[userId];
+            if (peers[userId]) return peers[userId]; // جلوگیری از ایجاد چندباره‌ی peer
 
-            console.log(`Creating WebRTC Peer: ${userId}`);
+            console.log(`🔗 Creating WebRTC Peer: ${userId}`);
 
             const peer = new SimplePeer({
                 initiator,
-                trickle: true, // ممکن است به true نیاز داشته باشد، بسته به نیاز پروژه
+                trickle: true, // استفاده از true برای جلوگیری از race conditions
                 stream
             });
 
             peer.on("signal", signal => {
-                console.log(`Sending WebRTC signal to ${userId}`);
+                console.log(`📡 Sending WebRTC signal to ${userId}`);
                 socket.emit("webrtc-signal", { signal, to: userId });
             });
 
             peer.on("stream", userStream => {
-                console.log(`Receiving audio stream from ${userId}`);
+                console.log(`🔊 Receiving audio stream from ${userId}`);
                 const audio = document.createElement("audio");
                 audio.srcObject = userStream;
                 audio.autoplay = true;
@@ -93,8 +93,18 @@
             });
 
             peer.on("close", () => {
-                console.log(`Peer connection closed: ${userId}`);
+                console.log(`❌ Peer connection closed: ${userId}`);
                 delete peers[userId];
+            });
+
+            // مدیریت مذاکره خودکار
+            peer.on("negotiationneeded", () => {
+                console.log(`🔄 Negotiation needed for ${userId}`);
+                peer.createOffer().then(offer => {
+                    return peer.setLocalDescription(offer);
+                }).then(() => {
+                    socket.emit("webrtc-signal", { signal: peer.localDescription, to: userId });
+                }).catch(err => console.error("⚠️ Negotiation error:", err));
             });
 
             peers[userId] = peer;
@@ -128,15 +138,24 @@
             }
 
             if (peers[from].destroyed) {
-                console.warn(`Peer connection with ${from} is destroyed. Ignoring signal.`);
+                console.warn(`⚠️ Peer connection with ${from} is destroyed. Ignoring signal.`);
                 return;
             }
 
             try {
-                console.log(`Receiving signal from ${from}:`, signal);
-                peers[from].signal(signal);
+                console.log(`🔄 Receiving signal from ${from}:`, signal);
+                
+                // بررسی وضعیت قبل از `setRemoteDescription`
+                if (signal.type === "answer" && peers[from].signalingState !== "have-local-offer") {
+                    console.warn(`⚠️ Ignoring answer from ${from} because the signaling state is ${peers[from].signalingState}`);
+                    return;
+                }
+
+                setTimeout(() => {
+                    peers[from].signal(signal);
+                }, 200);
             } catch (err) {
-                console.error(`WebRTC signal error from ${from}:`, err);
+                console.error(`🚨 WebRTC signal error from ${from}:`, err);
             }
         });
 
@@ -146,9 +165,9 @@
                 stream.getAudioTracks().forEach(track => {
                     track.enabled = !isMuted;
                 });
-                console.log(isMuted ? "Microphone muted" : "Microphone unmuted");
+                console.log(isMuted ? "🔇 Microphone muted" : "🎤 Microphone unmuted");
             } else {
-                alert("No active microphone stream.");
+                alert("⚠️ No active microphone stream.");
             }
         }
 
