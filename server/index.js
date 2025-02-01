@@ -45,15 +45,18 @@ io.on("connection", (socket) => {
     const channelId = users[socket.id];
     if (channelId) {
       socket.leave(channelId);
-      delete users[socket.id];
+      delete users[socket.id]; // حذف کاربر از لیست
+
       console.log(`User ${socket.id} left channel ${channelId}`);
 
+      // ارسال لیست جدید کاربران به همه‌ی اعضای چنل
       io.to(channelId).emit("update-users", {
         channelId,
         users: Object.keys(users).filter((id) => users[id] === channelId),
       });
     }
   });
+
 
   // زمانی که کاربر قطع می‌شود
   socket.on("disconnect", () => {
@@ -83,7 +86,7 @@ const checkPort = (port) => {
     const tester = net.createServer()
       .once("error", (err) => {
         if (err.code === "EADDRINUSE") {
-          console.log(`⚠️ Port ${port} is already in use. Trying another port...`);
+          console.log(`Port ${port} is already in use. Trying another port...`);
           resolve(false);
         } else {
           reject(err);
@@ -101,10 +104,10 @@ const checkPort = (port) => {
 checkPort(port).then((available) => {
   if (available) {
     server.listen(port, () => {
-      console.log(`🚀 Server is running on port ${port}`);
+      console.log(`Server is running on port ${port}`);
     });
   } else {
-    console.error(`❌ Port ${port} is not available. Please restart the server.`);
+    console.error(`Port ${port} is not available. Please restart the server.`);
   }
 });
 

@@ -67,7 +67,7 @@
         async function joinChannel() {
             currentChannel = document.getElementById("channelId").value;
             if (!currentChannel) {
-                alert("⚠️ Please enter a channel ID.");
+                alert("Please enter a channel ID.");
                 return;
             }
 
@@ -89,7 +89,7 @@
         function createPeer(userId, initiator) {
             if (peers[userId]) return peers[userId]; // جلوگیری از ایجاد چندباره‌ی peer
 
-            console.log(`🔗 Creating WebRTC Peer: ${userId}`);
+            console.log(`Creating WebRTC Peer: ${userId}`);
 
             const peer = new SimplePeer({
                 initiator,
@@ -98,12 +98,12 @@
             });
 
             peer.on("signal", signal => {
-                console.log(`📡 Sending WebRTC signal to ${userId}`);
+                console.log(`Sending WebRTC signal to ${userId}`);
                 socket.emit("webrtc-signal", { signal, to: userId });
             });
 
             peer.on("stream", userStream => {
-                console.log(`🔊 Receiving audio stream from ${userId}`);
+                console.log(`Receiving audio stream from ${userId}`);
                 const audio = document.createElement("audio");
                 audio.srcObject = userStream;
                 audio.autoplay = true;
@@ -111,13 +111,13 @@
             });
 
             peer.on("close", () => {
-                console.log(`❌ Peer connection closed: ${userId}`);
+                console.log(`Peer connection closed: ${userId}`);
                 delete peers[userId];
             });
 
             // مدیریت مذاکره خودکار
             peer.on("negotiationneeded", () => {
-                console.log(`🔄 Negotiation needed for ${userId}`);
+                console.log(`Negotiation needed for ${userId}`);
                 peer.createOffer().then(offer => {
                     return peer.setLocalDescription(offer);
                 }).then(() => {
@@ -130,18 +130,30 @@
         }
 
         socket.on("update-users", (data) => {
+            console.log("Updating user list:", data.users);
             const userList = document.getElementById("userList");
-            userList.innerHTML = "";
+            userList.innerHTML = ""; // پاک کردن لیست فعلی
+
             data.users.forEach(user => {
-                if (user !== socket.id && !peers[user]) {
+                if (!peers[user] && user !== socket.id) { // ایجاد Peer جدید در صورت نیاز
                     createPeer(user, true);
                 }
+
                 const li = document.createElement("li");
                 li.textContent = user;
                 li.id = `user-${user}`;
                 userList.appendChild(li);
             });
+
+            // ** حذف نام کاربران ترک کرده از لیست **
+            Object.keys(peers).forEach(userId => {
+                if (!data.users.includes(userId)) {
+                    console.log(`Removing ${userId} from peers list`);
+                    delete peers[userId];
+                }
+            });
         });
+
 
         socket.on("user-speaking", ({ userId, isSpeaking }) => {
             console.log(`User ${userId} is speaking: ${isSpeaking}`);
@@ -157,16 +169,16 @@
             }
 
             if (peers[from].destroyed) {
-                console.warn(`⚠️ Peer connection with ${from} is destroyed. Ignoring signal.`);
+                console.warn(`Peer connection with ${from} is destroyed. Ignoring signal.`);
                 return;
             }
 
             try {
-                console.log(`🔄 Receiving signal from ${from}:`, signal);
+                console.log(`Receiving signal from ${from}:`, signal);
                 
                 // بررسی وضعیت قبل از `setRemoteDescription`
                 if (signal.type === "answer" && peers[from].signalingState !== "have-local-offer") {
-                    console.warn(`⚠️ Ignoring answer from ${from} because the signaling state is ${peers[from].signalingState}`);
+                    console.warn(`Ignoring answer from ${from} because the signaling state is ${peers[from].signalingState}`);
                     return;
                 }
 
@@ -174,7 +186,7 @@
                     peers[from].signal(signal);
                 }, 200);
             } catch (err) {
-                console.error(`🚨 WebRTC signal error from ${from}:`, err);
+                console.error(`WebRTC signal error from ${from}:`, err);
             }
         });
 
@@ -184,9 +196,9 @@
                 stream.getAudioTracks().forEach(track => {
                     track.enabled = !isMuted;
                 });
-                console.log(isMuted ? "🔇 Microphone muted" : "🎤 Microphone unmuted");
+                console.log(isMuted ? "Microphone muted" : "🎤 Microphone unmuted");
             } else {
-                alert("⚠️ No active microphone stream.");
+                alert("No active microphone stream.");
             }
         }
 
