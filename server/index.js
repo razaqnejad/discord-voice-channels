@@ -11,7 +11,7 @@ const io = new Server(server, {
   }
 });
 
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 let users = {};  // ذخیره کاربران متصل به Voice Channels
 
@@ -77,4 +77,12 @@ io.on('connection', (socket) => {
 
 server.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
+});
+
+app.get("/", (req, res) => {
+  res.send("Server is running!");
+});
+
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 });
