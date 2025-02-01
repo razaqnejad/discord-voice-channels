@@ -22,18 +22,17 @@
             upgrade: false
         });
 
-        let peers = {}; // ذخیره Peerهای متصل
+        let peers = {}; 
         let isMuted = false;
         let currentChannel = null;
         let localStream = null;
 
-        // دریافت صدا از میکروفون و جلوگیری از پخش آن روی دستگاه خود کاربر
+        // دریافت صدا از میکروفون
         async function getMicrophoneStream() {
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 console.log("🎤 Microphone access granted.");
 
-                // پردازش صدا برای تشخیص صحبت کردن
                 const audioContext = new AudioContext();
                 const analyser = audioContext.createAnalyser();
                 analyser.fftSize = 512;
@@ -86,7 +85,7 @@
 
             const peer = new SimplePeer({
                 initiator,
-                trickle: true,
+                trickle: false,  // جلوگیری از Race Condition
                 stream: localStream
             });
 
@@ -101,7 +100,7 @@
                 const audio = document.createElement("audio");
                 audio.srcObject = userStream;
                 audio.autoplay = true;
-                audio.muted = false;
+                audio.controls = true; // دکمه پخش برای بررسی مشکل
                 document.body.appendChild(audio);
 
                 audio.play().then(() => {
@@ -123,7 +122,7 @@
         socket.on("update-users", (data) => {
             console.log("🔄 Updating user list:", data.users);
             const userList = document.getElementById("userList");
-            userList.innerHTML = ""; // پاک کردن لیست فعلی
+            userList.innerHTML = ""; 
 
             data.users.forEach(user => {
                 if (!peers[user] && user !== socket.id) {
@@ -165,8 +164,9 @@
             try {
                 console.log(`🔄 Receiving signal from ${from}:`, signal);
 
-                if (signal.type === "answer" && peers[from].signalingState !== "have-local-offer") {
-                    console.warn(`⚠️ Ignoring answer from ${from} because signaling state is ${peers[from].signalingState}`);
+                // بررسی signalingState قبل از setRemoteDescription
+                if (signal.type === "answer" && !peers[from].signalingState) {
+                    console.warn(`⚠️ Ignoring answer from ${from} because signaling state is undefined`);
                     return;
                 }
 
