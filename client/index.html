@@ -94,25 +94,30 @@
                 config: {
                     iceServers: [
                         { urls: "stun:stun.l.google.com:19302" },  // Google's STUN server
-                        { urls: "stun:stun1.l.google.com:19302" }  // Additional STUN server
+                        { urls: "stun:stun1.l.google.com:19302" }, // Additional STUN server
+                        { urls: "turn:your-turn-server.com", username: "user", credential: "pass" }
                     ]
                 }
             });
 
 
-            peer.on("signal", signal => {
-                console.log(`📡 Sending WebRTC signal to ${userId}`);
+            peer.on("signal", async signal => {
+                if (signal.type === "offer" || signal.type === "answer") {
+                    console.log(`📡 Sending WebRTC signal to ${userId}`);
+                    await new Promise(resolve => setTimeout(resolve, 100)); // Give some delay for state synchronization
+                }
                 socket.emit("webrtc-signal", { signal, to: userId });
             });
 
+
             peer.on("stream", userStream => {
+                console.log(`🔊 Received audio stream from ${userId}:`, userStream);
+
                 if (!userStream) {
                     console.warn(`Received empty stream from ${userId}`);
                     return;
                 }
                 
-                console.log(`🔊 Receiving audio stream from ${userId}`);
-
                 const audio = document.createElement("audio");
                 audio.srcObject = userStream;
                 audio.autoplay = true;
@@ -127,12 +132,20 @@
                 });
             });
 
+            peer.on("iceCandidate", candidate => {
+                console.log(`📡 New ICE candidate for ${userId}:`, candidate);
+            });
+
             peer.on("iceConnectionStateChange", () => {
                 console.log(`ICE state changed: ${peer.iceConnectionState}`);
                 if (peer.iceConnectionState === "failed") {
                     console.error(`ICE connection failed for ${userId}. Restarting...`);
                     peer.reconnect();
                 }
+            });
+
+            peer.on("connect", () => {
+                console.log(`✅ WebRTC peer connection established with ${userId}`);
             });
 
             peer.on("close", () => {
@@ -190,10 +203,11 @@
                 console.log(`🔄 Receiving signal from ${from}:`, signal);
 
                 // بررسی signalingState قبل از setRemoteDescription
-                if (signal.type === "answer" && !peers[from].signalingState) {
-                    console.warn(`⚠️ Ignoring answer from ${from} because signaling state is undefined`);
-                    return;
+                if (signal.type === "answer" && (!peers[from] || peers[from].destroyed)) {
+                    console.warn(`⚠️ Peer connection with ${from} does not exist or is destroyed. Recreating peer.`);
+                    createPeer(from, false);
                 }
+
 
                 setTimeout(() => {
                     peers[from].signal(signal);
