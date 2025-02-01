@@ -106,7 +106,6 @@
                 audio.srcObject = userStream;
                 audio.autoplay = true;
                 audio.muted = false;
-                audio.controls = true; // دکمه پخش برای بررسی مشکل
                 document.body.appendChild(audio);
 
                 audio.play().then(() => {
