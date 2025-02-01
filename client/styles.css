@@ -4,16 +4,16 @@
     --primary-bg: #0d021f;
     --secondary-bg: #1a0825;
     --text-color: #fdfdfd;
-    --accent-color: #ff00ff;
+    --accent-color: #b700ff;
     --neon-blue: #00eaff;
-    --neon-green: #00ff00;
-    --neon-pink: #ff0080;
-    --neon-purple: #b400ff;
-    --button-bg: #ff00ff;
-    --button-hover: #ff4500;
+    --neon-green: #00e5ff;
+    --neon-pink: #d000ff;
+    --neon-purple: #2b00ff;
+    --button-bg: #ff00a2;
+    --button-hover: #ff00f7;
     --input-bg: #150020;
-    --input-border: #ff00ff;
-    --user-active: #ff4500;
+    --input-border: #b700ff;
+    --user-active: #ff00ff;
 }
 
 body {
@@ -21,13 +21,22 @@ body {
     background: radial-gradient(circle, var(--primary-bg), var(--secondary-bg));
     color: var(--text-color);
     text-align: center;
-    padding: 20px;
+    padding: 40px;
     text-shadow: 0 0 5px var(--accent-color);
 }
 
-h1, h3 {
+h1 {
     color: var(--neon-blue);
     text-transform: uppercase;
+    letter-spacing: 2px;
+    animation: glitch 0.5s infinite alternate;
+    animation: flicker 0.2s infinite alternate;
+}
+
+h3 {
+    color: var(--neon-blue);
+    text-transform: uppercase;
+    padding-top: 20px;
     letter-spacing: 2px;
     animation: glitch 0.5s infinite alternate;
 }
@@ -37,14 +46,28 @@ h1, h3 {
     100% { text-shadow: -1px -1px var(--neon-pink), 1px 1px var(--neon-green); }
 }
 
+/* Layout fixes */
+.container {
+    max-width: 400px;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
 /* Input Field - Darker with Neon Glow */
+.input-container {
+    display: flex;
+    width: 100%;
+    margin: 28px 0 36px 0;
+}
+
 input[type="text"] {
     background-color: var(--input-bg);
     border: 2px solid var(--input-border);
-    color: #000;
+    color: #ffffff;
     padding: 12px;
-    margin: 10px;
-    width: 270px;
+    width: 100%;
     border-radius: 8px;
     outline: none;
     font-size: 16px;
@@ -60,20 +83,34 @@ input[type="text"]::placeholder {
 input[type="text"]:focus {
     border-color: var(--neon-blue);
     box-shadow: 0 0 20px var(--neon-blue);
-    color: #000;
+    color: #fff;
 }
 
-input[type="text"]:not(:placeholder-shown) {
-    background-color: #000;
+input[type="text"]:-webkit-autofill,
+input[type="text"]:-webkit-autofill:hover, 
+input[type="text"]:-webkit-autofill:focus, 
+input[type="text"]:-webkit-autofill:active {
+    background-color: var(--input-bg) !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    box-shadow: 0 0 10px var(--neon-purple) !important;
+    transition: background-color 5000s ease-in-out 0s;
 }
 
-/* Buttons - Stronger Gradient & Cohesive Look */
+/* Button Group */
+.button-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
 button {
     background: linear-gradient(45deg, var(--neon-pink), var(--neon-purple));
     color: var(--text-color);
     border: none;
-    padding: 12px 18px;
-    margin: 10px;
+    padding: 12px;
+    width: 100%;
     cursor: pointer;
     font-size: 14px;
     border-radius: 8px;
@@ -86,7 +123,7 @@ button {
 button:hover {
     background: linear-gradient(45deg, var(--neon-purple), var(--neon-blue));
     box-shadow: 0 0 15px var(--neon-green);
-    transform: scale(1.1);
+    transform: scale(1.01);
 }
 
 /* User List */
@@ -128,13 +165,17 @@ li.active {
     100% { opacity: 1; }
 }
 
-h1 {
-    animation: flicker 0.2s infinite alternate;
-}
-
 /* Responsive Design */
 @media (max-width: 600px) {
+    .container {
+        width: 100%;
+    }
+
     input[type="text"] {
-        width: 90%;
+        width: 100%;
+    }
+    
+    .button-container button {
+        width: 100%;
     }
 }
