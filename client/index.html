@@ -14,7 +14,7 @@
     <button onclick="joinChannel()">Join Channel</button>
     <button onclick="leaveChannel()">Leave Channel</button>
     <button onclick="toggleMute()">Mute/Unmute</button>
-    <h2>Users in Channel:</h2>
+    <h3>Users in Channel:</h3>
     <ul id="userList"></ul>
 
     <script>
@@ -101,7 +101,7 @@
         socket.on("user-speaking", ({ userId, isSpeaking }) => {
             const userElement = document.getElementById(`user-${userId}`);
             if (userElement) {
-                userElement.style.color = isSpeaking ? "green" : "black";
+                userElement.style.color = isSpeaking ? "white" : "#6f6f6f";
             }
         });
 
