@@ -1,5 +1,4 @@
-/* styles.css */
-@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
 :root {
     --primary-bg: #0d021f;
@@ -9,16 +8,16 @@
     --neon-blue: #00eaff;
     --neon-green: #00ff00;
     --neon-pink: #ff0080;
-    --neon-orange: #ff4500;
-    --button-bg: #7d00ff;
-    --button-hover: #ff00ff;
-    --input-bg: #2a0033;
+    --neon-purple: #b400ff;
+    --button-bg: #ff00ff;
+    --button-hover: #ff4500;
+    --input-bg: #150020;
     --input-border: #ff00ff;
     --user-active: #ff4500;
 }
 
 body {
-    font-family: 'VT323', monospace;
+    font-family: 'Press Start 2P', cursive;
     background: radial-gradient(circle, var(--primary-bg), var(--secondary-bg));
     color: var(--text-color);
     text-align: center;
@@ -38,47 +37,54 @@ h1, h2 {
     100% { text-shadow: -3px -3px var(--neon-pink), 3px 3px var(--neon-green); }
 }
 
+/* Input Field - Darker with Neon Glow */
 input[type="text"] {
     background-color: var(--input-bg);
     border: 2px solid var(--input-border);
-    color: var(--text-color);
+    color: #ffffff;
     padding: 12px;
     margin: 10px;
     width: 270px;
     border-radius: 8px;
     outline: none;
-    font-size: 18px;
+    font-size: 16px;
     text-align: center;
     transition: all 0.3s ease-in-out;
-    box-shadow: 0 0 10px var(--neon-pink);
+    box-shadow: 0 0 10px var(--neon-purple);
+}
+
+input[type="text"]::placeholder {
+    color: #a0a0a0;
 }
 
 input[type="text"]:focus {
-    border-color: var(--neon-green);
-    box-shadow: 0 0 20px var(--neon-green);
+    border-color: var(--neon-blue);
+    box-shadow: 0 0 20px var(--neon-blue);
 }
 
+/* Buttons - Stronger Gradient & Cohesive Look */
 button {
-    background: linear-gradient(45deg, var(--button-bg), var(--neon-pink));
+    background: linear-gradient(45deg, var(--neon-pink), var(--neon-purple));
     color: var(--text-color);
     border: none;
     padding: 12px 18px;
     margin: 10px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 14px;
     border-radius: 8px;
     text-transform: uppercase;
     font-weight: bold;
     transition: 0.3s ease-in-out;
-    box-shadow: 0 0 10px var(--button-bg);
+    box-shadow: 0 0 10px var(--neon-purple);
 }
 
 button:hover {
-    background: linear-gradient(45deg, var(--neon-orange), var(--neon-blue));
+    background: linear-gradient(45deg, var(--neon-purple), var(--neon-blue));
     box-shadow: 0 0 15px var(--neon-green);
     transform: scale(1.1);
 }
 
+/* User List */
 ul {
     list-style-type: none;
     padding: 0;
@@ -87,12 +93,12 @@ ul {
 }
 
 li {
-    background: linear-gradient(90deg, var(--neon-pink), var(--neon-blue));
+    background: linear-gradient(90deg, var(--neon-purple), var(--neon-blue));
     padding: 12px;
     margin: 5px;
     border-radius: 5px;
     text-align: left;
-    font-size: 18px;
+    font-size: 14px;
     transition: all 0.3s ease-in-out;
     animation: neonGlow 1.5s infinite alternate;
     color: var(--primary-bg);
