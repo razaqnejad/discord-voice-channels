@@ -71,13 +71,21 @@
         function createPeer(userId, initiator) {
             if (peers[userId]) return peers[userId];
 
-            const peer = new SimplePeer({ initiator, trickle: false, stream });
+            console.log(`Creating WebRTC Peer: ${userId}`);
+
+            const peer = new SimplePeer({
+                initiator,
+                trickle: true, // ممکن است به true نیاز داشته باشد، بسته به نیاز پروژه
+                stream
+            });
 
             peer.on("signal", signal => {
+                console.log(`Sending WebRTC signal to ${userId}`);
                 socket.emit("webrtc-signal", { signal, to: userId });
             });
 
             peer.on("stream", userStream => {
+                console.log(`Receiving audio stream from ${userId}`);
                 const audio = document.createElement("audio");
                 audio.srcObject = userStream;
                 audio.autoplay = true;
@@ -85,6 +93,7 @@
             });
 
             peer.on("close", () => {
+                console.log(`Peer connection closed: ${userId}`);
                 delete peers[userId];
             });
 
@@ -117,7 +126,18 @@
             if (!peers[from]) {
                 createPeer(from, false);
             }
-            peers[from].signal(signal);
+
+            if (peers[from].destroyed) {
+                console.warn(`Peer connection with ${from} is destroyed. Ignoring signal.`);
+                return;
+            }
+
+            try {
+                console.log(`Receiving signal from ${from}:`, signal);
+                peers[from].signal(signal);
+            } catch (err) {
+                console.error(`WebRTC signal error from ${from}:`, err);
+            }
         });
 
         function toggleMute() {
