@@ -25,102 +25,112 @@
         let peers = {}; // ذخیره Peerهای متصل
         let isMuted = false;
         let currentChannel = null;
+        let stream = null; // تعریف متغیر برای ذخیره جریان صوتی
 
-        function joinChannel() {
+        // دریافت صدا از میکروفون
+        async function getMicrophoneStream() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                console.log("Microphone access granted.");
+
+                const audio = document.createElement("audio");
+                audio.srcObject = stream;
+                audio.autoplay = true;
+                document.body.appendChild(audio);
+
+                return stream;
+            } catch (error) {
+                console.error("Microphone access denied:", error);
+                alert("Please allow microphone access to use voice chat.");
+                return null;
+            }
+        }
+
+        async function joinChannel() {
             currentChannel = document.getElementById("channelId").value;
+            if (!currentChannel) {
+                alert("Please enter a channel ID.");
+                return;
+            }
+
+            stream = await getMicrophoneStream();
+            if (!stream) return;
+
             socket.emit("join-channel", currentChannel);
         }
 
         function leaveChannel() {
-            socket.emit("leave-channel");
-            Object.values(peers).forEach(peer => peer.destroy());
-            peers = {};
-            currentChannel = null;
+            if (currentChannel) {
+                socket.emit("leave-channel");
+                Object.values(peers).forEach(peer => peer.destroy());
+                peers = {};
+                currentChannel = null;
+            }
         }
 
-        // دریافت صدا از میکروفون و ارسال به کاربران دیگر
-        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-            const audio = document.createElement("audio");
-            audio.srcObject = stream;
-            audio.autoplay = true;
-            document.body.appendChild(audio);
-            let isMuted = false;
+        function createPeer(userId, initiator) {
+            if (peers[userId]) return peers[userId];
 
-            const audioContext = new AudioContext();
-            const analyser = audioContext.createAnalyser();
-            analyser.fftSize = 512;
-            const microphone = audioContext.createMediaStreamSource(stream);
-            microphone.connect(analyser);
+            const peer = new SimplePeer({ initiator, trickle: false, stream });
 
-            setInterval(() => {
-                const dataArray = new Uint8Array(analyser.frequencyBinCount);
-                analyser.getByteFrequencyData(dataArray);
-                const volume = dataArray.reduce((a, b) => a + b) / dataArray.length;
+            peer.on("signal", signal => {
+                socket.emit("webrtc-signal", { signal, to: userId });
+            });
 
-                const isSpeaking = volume > 10;
-                socket.emit("user-speaking", { userId: socket.id, isSpeaking });
-            }, 300);
+            peer.on("stream", userStream => {
+                const audio = document.createElement("audio");
+                audio.srcObject = userStream;
+                audio.autoplay = true;
+                document.body.appendChild(audio);
+            });
 
-            function createPeer(userId, initiator) {
-                if (peers[userId]) return peers[userId];
+            peer.on("close", () => {
+                delete peers[userId];
+            });
 
-                const peer = new SimplePeer({ initiator, trickle: false, stream });
+            peers[userId] = peer;
+            return peer;
+        }
 
-                peer.on("signal", signal => {
-                    socket.emit("webrtc-signal", { signal, to: userId });
-                });
+        socket.on("update-users", (data) => {
+            const userList = document.getElementById("userList");
+            userList.innerHTML = "";
+            data.users.forEach(user => {
+                if (user !== socket.id && !peers[user]) {
+                    createPeer(user, true);
+                }
+                const li = document.createElement("li");
+                li.textContent = user;
+                li.id = `user-${user}`;
+                userList.appendChild(li);
+            });
+        });
 
-                peer.on("stream", userStream => {
-                    const audio = document.createElement("audio");
-                    audio.srcObject = userStream;
-                    audio.autoplay = true;
-                    document.body.appendChild(audio);
-                });
-
-                peer.on("close", () => {
-                    delete peers[userId];
-                });
-
-                peers[userId] = peer;
-                return peer;
+        socket.on("user-speaking", ({ userId, isSpeaking }) => {
+            const userElement = document.getElementById(`user-${userId}`);
+            if (userElement) {
+                userElement.style.color = isSpeaking ? "green" : "black";
             }
+        });
 
-            socket.on("update-users", (data) => {
-                const userList = document.getElementById("userList");
-                userList.innerHTML = "";
-                data.users.forEach(user => {
-                    if (user !== socket.id && !peers[user]) {
-                        createPeer(user, true);
-                    }
-                    const li = document.createElement("li");
-                    li.textContent = user;
-                    li.id = `user-${user}`;
-                    userList.appendChild(li);
-                });
-            });
-
-            socket.on("user-speaking", ({ userId, isSpeaking }) => {
-                const userElement = document.getElementById(`user-${userId}`);
-                if (userElement) {
-                    userElement.style.color = isSpeaking ? "green" : "black";
-                }
-            });
-
-            socket.on("webrtc-signal", ({ signal, from }) => {
-                if (!peers[from]) {
-                    createPeer(from, false);
-                }
-                peers[from].signal(signal);
-            });
-        }).catch(err => console.error("Error accessing microphone:", err));
+        socket.on("webrtc-signal", ({ signal, from }) => {
+            if (!peers[from]) {
+                createPeer(from, false);
+            }
+            peers[from].signal(signal);
+        });
 
         function toggleMute() {
-            isMuted = !isMuted;
-            Object.values(peers).forEach(peer => {
-                peer.stream.getAudioTracks()[0].enabled = !isMuted;
-            });
+            if (stream) {
+                isMuted = !isMuted;
+                stream.getAudioTracks().forEach(track => {
+                    track.enabled = !isMuted;
+                });
+                console.log(isMuted ? "Microphone muted" : "Microphone unmuted");
+            } else {
+                alert("No active microphone stream.");
+            }
         }
-
 
         window.addEventListener("beforeunload", () => {
             socket.emit("leave-channel");
