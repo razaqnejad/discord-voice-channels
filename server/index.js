@@ -1,10 +1,8 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-
-
-const socketIo = require("socket.io");
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 const cors = require("cors");
+const net = require("net");
 
 const app = express();
 const server = http.createServer(app);
@@ -19,18 +17,18 @@ app.use(cors());
 
 const port = process.env.PORT || 3000;
 
-let users = {};  // ذخیره کاربران متصل به Voice Channels
+let users = {}; // ذخیره کاربران متصل به Voice Channels
 
-io.on('connection', (socket) => {
+io.on("connection", (socket) => {
   console.log(`User connected: ${socket.id}`);
 
   // کاربر به Voice Channel اضافه می‌شود
-  socket.on('join-channel', (channelId) => {
+  socket.on("join-channel", (channelId) => {
     socket.join(channelId);
     users[socket.id] = channelId;
     console.log(`User ${socket.id} joined channel ${channelId}`);
 
-    io.to(channelId).emit('update-users', {
+    io.to(channelId).emit("update-users", {
       channelId,
       users: Object.keys(users).filter((id) => users[id] === channelId),
     });
@@ -43,14 +41,14 @@ io.on('connection', (socket) => {
   });
 
   // زمانی که کاربر از کانال خارج می‌شود
-  socket.on('leave-channel', () => {
+  socket.on("leave-channel", () => {
     const channelId = users[socket.id];
     if (channelId) {
       socket.leave(channelId);
       delete users[socket.id];
       console.log(`User ${socket.id} left channel ${channelId}`);
 
-      io.to(channelId).emit('update-users', {
+      io.to(channelId).emit("update-users", {
         channelId,
         users: Object.keys(users).filter((id) => users[id] === channelId),
       });
@@ -58,11 +56,11 @@ io.on('connection', (socket) => {
   });
 
   // زمانی که کاربر قطع می‌شود
-  socket.on('disconnect', () => {
+  socket.on("disconnect", () => {
     const channelId = users[socket.id];
     if (channelId) {
       delete users[socket.id];
-      io.to(channelId).emit('update-users', {
+      io.to(channelId).emit("update-users", {
         channelId,
         users: Object.keys(users).filter((id) => users[id] === channelId),
       });
@@ -71,24 +69,45 @@ io.on('connection', (socket) => {
   });
 
   socket.on("user-speaking", (data) => {
-      const channelId = users[socket.id];
-      if (channelId) {
-          io.to(channelId).emit("user-speaking", data);
-      }
+    const channelId = users[socket.id];
+    if (channelId) {
+      io.to(channelId).emit("user-speaking", data);
+    }
   });
-
 });
 
+// بررسی اگر پورت اشغال بود، سرور اجرا نشود
+const checkPort = (port) => {
+  return new Promise((resolve, reject) => {
+    const tester = net.createServer()
+      .once("error", (err) => {
+        if (err.code === "EADDRINUSE") {
+          console.log(`⚠️ Port ${port} is already in use. Trying another port...`);
+          resolve(false);
+        } else {
+          reject(err);
+        }
+      })
+      .once("listening", () => {
+        tester.close();
+        resolve(true);
+      })
+      .listen(port);
+  });
+};
 
-
-server.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+// اجرا کردن سرور فقط اگر پورت اشغال نباشد
+checkPort(port).then((available) => {
+  if (available) {
+    server.listen(port, () => {
+      console.log(`🚀 Server is running on port ${port}`);
+    });
+  } else {
+    console.error(`❌ Port ${port} is not available. Please restart the server.`);
+  }
 });
 
+// مسیر اصلی برای تست سرور
 app.get("/", (req, res) => {
   res.send("Server is running!");
-});
-
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
 });
