@@ -17,39 +17,16 @@
     <ul id="userList"></ul>
 
     <script>
-        const socket = io("https://discord-voice-channels.onrender.com", {
-            transports: ["websocket"],
-            upgrade: false
-        });
-
+        const socket = io("https://discord-voice-channels.onrender.com", { transports: ["websocket"], upgrade: false });
         let peers = {}; 
         let isMuted = false;
         let currentChannel = null;
         let localStream = null;
 
-        // دریافت صدا از میکروفون
         async function getMicrophoneStream() {
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 console.log("🎤 Microphone access granted.");
-
-                const audioContext = new AudioContext();
-                const analyser = audioContext.createAnalyser();
-                analyser.fftSize = 512;
-                const microphone = audioContext.createMediaStreamSource(localStream);
-                microphone.connect(analyser);
-
-                localStream.getAudioTracks()[0].enabled = true;
-
-                setInterval(() => {
-                    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-                    analyser.getByteFrequencyData(dataArray);
-                    const volume = dataArray.reduce((a, b) => a + b) / dataArray.length;
-                    
-                    const isSpeaking = volume > 10;
-                    socket.emit("user-speaking", { userId: socket.id, isSpeaking });
-                }, 300);
-
                 return localStream;
             } catch (error) {
                 console.error("🚨 Microphone access denied:", error);
@@ -64,10 +41,8 @@
                 alert("Please enter a channel ID.");
                 return;
             }
-
             localStream = await getMicrophoneStream();
             if (!localStream) return;
-
             socket.emit("join-channel", currentChannel);
         }
 
@@ -81,153 +56,64 @@
         }
 
         function createPeer(userId, initiator) {
-            if (peers[userId]) {
-                console.warn(`Peer for ${userId} already exists. Skipping creation.`);
-                return peers[userId];
-            }
+            if (peers[userId]) return peers[userId];
             console.log(`🔗 Creating WebRTC Peer: ${userId}`);
 
             const peer = new SimplePeer({
                 initiator,
                 trickle: true,
                 stream: localStream,
-                config: {
-                    iceServers: [
-                        { urls: "stun:stun.l.google.com:19302" },  // Google's STUN server
-                        { urls: "stun:stun1.l.google.com:19302" }, // Additional STUN server
-                        { urls: "turn:your-turn-server.com", username: "user", credential: "pass" }
-                    ]
-                }
+                config: { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] }
             });
 
-
-            peer.on("signal", async signal => {
-                if (signal.type === "offer" || signal.type === "answer") {
-                    console.log(`📡 Sending WebRTC signal to ${userId}`);
-                    await new Promise(resolve => setTimeout(resolve, 100)); // Give some delay for state synchronization
-                }
+            peer.on("signal", signal => {
+                console.log(`📡 Sending WebRTC signal to ${userId}`);
                 socket.emit("webrtc-signal", { signal, to: userId });
             });
 
-
             peer.on("stream", userStream => {
-                console.log(`🔊 Received audio stream from ${userId}:`, userStream);
-
-                if (!userStream) {
-                    console.warn(`Received empty stream from ${userId}`);
-                    return;
-                }
-                
+                if (!userStream || userStream.getAudioTracks().length === 0) return;
+                console.log(`🔊 Received audio stream from ${userId}`);
                 const audio = document.createElement("audio");
                 audio.srcObject = userStream;
                 audio.autoplay = true;
-                audio.muted = false;
-                audio.controls = false;  // جلوگیری از نمایش کنترل‌های پخش صدا
                 document.body.appendChild(audio);
-
-                audio.play().then(() => {
-                    console.log(`🎶 Audio from ${userId} is playing.`);
-                }).catch(e => {
-                    console.error("⚠️ Audio play error:", e);
-                });
             });
 
-            peer.on("iceCandidate", candidate => {
-                console.log(`📡 New ICE candidate for ${userId}:`, candidate);
-            });
-
-            peer.on("iceConnectionStateChange", () => {
-                console.log(`ICE state changed: ${peer.iceConnectionState}`);
-                if (peer.iceConnectionState === "failed") {
-                    console.error(`ICE connection failed for ${userId}. Restarting...`);
-                    peer.reconnect();
-                }
-            });
-
-            peer.on("connect", () => {
-                console.log(`✅ WebRTC peer connection established with ${userId}`);
-            });
-
-            peer.on("close", () => {
-                console.log(`❌ Peer connection closed: ${userId}`);
-                delete peers[userId];
-            });
-
+            peer.on("close", () => { delete peers[userId]; });
             peers[userId] = peer;
             return peer;
         }
 
-        socket.on("update-users", (data) => {
-            console.log("🔄 Updating user list:", data.users);
-            const userList = document.getElementById("userList");
-            userList.innerHTML = ""; 
-
-            data.users.forEach(user => {
-                if (!peers[user] && user !== socket.id) {
-                    createPeer(user, true);
-                }
-
+        socket.on("update-users", ({ users }) => {
+            document.getElementById("userList").innerHTML = "";
+            users.forEach(user => {
+                if (!peers[user] && user !== socket.id) createPeer(user, true);
                 const li = document.createElement("li");
                 li.textContent = user;
-                li.id = `user-${user}`;
-                userList.appendChild(li);
+                document.getElementById("userList").appendChild(li);
             });
-
-            // حذف کاربران ترک کرده
-            Object.keys(peers).forEach(userId => {
-                if (!data.users.includes(userId)) {
-                    console.log(`❌ Removing ${userId} from peers list`);
-                    delete peers[userId];
-                }
-            });
-        });
-
-        socket.on("user-speaking", ({ userId, isSpeaking }) => {
-            const userElement = document.getElementById(`user-${userId}`);
-            if (userElement) {
-                userElement.style.color = isSpeaking ? "green" : "black";
-            }
         });
 
         socket.on("webrtc-signal", ({ signal, from }) => {
-            if (!peers[from]) {
-                createPeer(from, false);
-            }
-
-            if (peers[from].destroyed) {
-                console.warn(`⚠️ Peer connection with ${from} is destroyed. Ignoring signal.`);
-                return;
-            }
-
-            try {
-                console.log(`🔄 Receiving signal from ${from}:`, signal);
-
-                // بررسی signalingState قبل از setRemoteDescription
-                if (signal.type === "answer" && (!peers[from] || peers[from].destroyed)) {
-                    console.warn(`⚠️ Peer connection with ${from} does not exist or is destroyed. Recreating peer.`);
-                    createPeer(from, false);
-                }
-
-
-                setTimeout(() => {
+            if (!peers[from]) createPeer(from, false);
+            if (peers[from] && !peers[from].destroyed) {
+                try {
+                    if (signal.type === "answer" && peers[from].signalingState !== "have-local-offer") return;
                     peers[from].signal(signal);
-                }, 200);
-            } catch (err) {
-                console.error(`🚨 WebRTC signal error from ${from}:`, err);
+                } catch (err) {
+                    console.error(`🚨 WebRTC signal error from ${from}:`, err);
+                }
             }
         });
 
         function toggleMute() {
-            if (!localStream) return alert("No active microphone stream.");
-    
-            isMuted = !isMuted;
-            localStream.getAudioTracks().forEach(track => track.enabled = !isMuted);
-            console.log(isMuted ? "🔇 Microphone muted" : "🎤 Microphone unmuted");
+            if (localStream) {
+                isMuted = !isMuted;
+                localStream.getAudioTracks().forEach(track => track.enabled = !isMuted);
+                console.log(isMuted ? "🔇 Microphone muted" : "🎤 Microphone unmuted");
+            }
         }
-
-        window.addEventListener("beforeunload", () => {
-            socket.emit("leave-channel");
-        });
     </script>
 </body>
 </html>
