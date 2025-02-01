@@ -89,9 +89,16 @@
 
             const peer = new SimplePeer({
                 initiator,
-                trickle: true,  // جلوگیری از Race Condition
-                stream: localStream
+                trickle: true,
+                stream: localStream,
+                config: {
+                    iceServers: [
+                        { urls: "stun:stun.l.google.com:19302" },  // Google's STUN server
+                        { urls: "stun:stun1.l.google.com:19302" }  // Additional STUN server
+                    ]
+                }
             });
+
 
             peer.on("signal", signal => {
                 console.log(`📡 Sending WebRTC signal to ${userId}`);
@@ -197,15 +204,11 @@
         });
 
         function toggleMute() {
-            if (localStream) {
-                isMuted = !isMuted;
-                localStream.getAudioTracks().forEach(track => {
-                    track.enabled = !isMuted;
-                });
-                console.log(isMuted ? "🔇 Microphone muted" : "🎤 Microphone unmuted");
-            } else {
-                alert("⚠️ No active microphone stream.");
-            }
+            if (!localStream) return alert("No active microphone stream.");
+    
+            isMuted = !isMuted;
+            localStream.getAudioTracks().forEach(track => track.enabled = !isMuted);
+            console.log(isMuted ? "🔇 Microphone muted" : "🎤 Microphone unmuted");
         }
 
         window.addEventListener("beforeunload", () => {
