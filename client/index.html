@@ -39,6 +39,8 @@
                 const microphone = audioContext.createMediaStreamSource(localStream);
                 microphone.connect(analyser);
 
+                localStream.getAudioTracks()[0].enabled = true;
+
                 setInterval(() => {
                     const dataArray = new Uint8Array(analyser.frequencyBinCount);
                     analyser.getByteFrequencyData(dataArray);
@@ -87,7 +89,7 @@
 
             const peer = new SimplePeer({
                 initiator,
-                trickle: false,  // جلوگیری از Race Condition
+                trickle: true,  // جلوگیری از Race Condition
                 stream: localStream
             });
 
@@ -108,6 +110,7 @@
                 audio.srcObject = userStream;
                 audio.autoplay = true;
                 audio.muted = false;
+                audio.controls = false;  // جلوگیری از نمایش کنترل‌های پخش صدا
                 document.body.appendChild(audio);
 
                 audio.play().then(() => {
