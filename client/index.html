@@ -44,6 +44,7 @@
             localStream = await getMicrophoneStream();
             if (!localStream) return;
             socket.emit("join-channel", currentChannel);
+            startSpeakingDetection();
         }
 
         function leaveChannel() {
@@ -91,8 +92,16 @@
                 if (!peers[user] && user !== socket.id) createPeer(user, true);
                 const li = document.createElement("li");
                 li.textContent = user;
+                li.id = `user-${user}`;
                 document.getElementById("userList").appendChild(li);
             });
+        });
+
+        socket.on("user-speaking", ({ userId, isSpeaking }) => {
+            const userElement = document.getElementById(`user-${userId}`);
+            if (userElement) {
+                userElement.style.color = isSpeaking ? "green" : "black";
+            }
         });
 
         socket.on("webrtc-signal", ({ signal, from }) => {
@@ -113,6 +122,22 @@
                 localStream.getAudioTracks().forEach(track => track.enabled = !isMuted);
                 console.log(isMuted ? "🔇 Microphone muted" : "🎤 Microphone unmuted");
             }
+        }
+
+        function startSpeakingDetection() {
+            const audioContext = new AudioContext();
+            const analyser = audioContext.createAnalyser();
+            analyser.fftSize = 512;
+            const microphone = audioContext.createMediaStreamSource(localStream);
+            microphone.connect(analyser);
+
+            setInterval(() => {
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                analyser.getByteFrequencyData(dataArray);
+                const volume = dataArray.reduce((a, b) => a + b) / dataArray.length;
+                const isSpeaking = volume > 10;
+                socket.emit("user-speaking", { userId: socket.id, isSpeaking });
+            }, 300);
         }
     </script>
 </body>
