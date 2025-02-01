@@ -95,11 +95,17 @@
             });
 
             peer.on("stream", userStream => {
+                if (!userStream) {
+                    console.warn(`Received empty stream from ${userId}`);
+                    return;
+                }
+                
                 console.log(`🔊 Receiving audio stream from ${userId}`);
 
                 const audio = document.createElement("audio");
                 audio.srcObject = userStream;
                 audio.autoplay = true;
+                audio.muted = false;
                 audio.controls = true; // دکمه پخش برای بررسی مشکل
                 document.body.appendChild(audio);
 
