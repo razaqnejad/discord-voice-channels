@@ -1,0 +1,84 @@
+/* styles.css */
+:root {
+    --primary-bg: #1e1e2e;
+    --secondary-bg: #282a36;
+    --text-color: #f8f8f2;
+    --accent-color: #8be9fd;
+    --button-bg: #6272a4;
+    --button-hover: #50fa7b;
+    --input-bg: #44475a;
+    --input-border: #6272a4;
+    --user-active: #50fa7b;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: var(--primary-bg);
+    color: var(--text-color);
+    text-align: center;
+    padding: 20px;
+}
+
+h1, h2 {
+    color: var(--accent-color);
+}
+
+input[type="text"] {
+    background-color: var(--input-bg);
+    border: 2px solid var(--input-border);
+    color: var(--text-color);
+    padding: 10px;
+    margin: 10px;
+    width: 250px;
+    border-radius: 5px;
+    outline: none;
+}
+
+input[type="text"]::placeholder {
+    color: #bdbdbd;
+}
+
+button {
+    background-color: var(--button-bg);
+    color: var(--text-color);
+    border: none;
+    padding: 10px 15px;
+    margin: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: 5px;
+    transition: background 0.3s ease;
+}
+
+button:hover {
+    background-color: var(--button-hover);
+    color: var(--primary-bg);
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+    max-width: 300px;
+    margin: 20px auto;
+}
+
+li {
+    background: var(--secondary-bg);
+    padding: 10px;
+    margin: 5px;
+    border-radius: 5px;
+    text-align: left;
+    transition: color 0.3s ease-in-out;
+}
+
+li.active {
+    color: var(--user-active);
+    font-weight: bold;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+    input[type="text"] {
+        width: 90%;
+    }
+}
