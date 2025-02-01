@@ -33,10 +33,11 @@
                 stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 console.log("Microphone access granted.");
 
-                const audio = document.createElement("audio");
-                audio.srcObject = stream;
-                audio.autoplay = true;
-                document.body.appendChild(audio);
+                // uncomment to echo on the main device
+                // const audio = document.createElement("audio");
+                // audio.srcObject = stream;
+                // audio.autoplay = true;
+                // document.body.appendChild(audio);
 
                 // پردازش صدا برای تشخیص صحبت کردن
                 const audioContext = new AudioContext();
