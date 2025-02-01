@@ -17,10 +17,11 @@
     <ul id="userList"></ul>
 
     <script>
-        const socket = io("https://discord-voice-server.vercel.app", {
+        const socket = io("https://discord-voice-channels.onrender.com", {
             transports: ["websocket"],
             upgrade: false
         });
+
         let peers = {}; // ذخیره Peerهای متصل
         let isMuted = false;
         let currentChannel = null;
