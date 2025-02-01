@@ -25,45 +25,37 @@
         let peers = {}; // ذخیره Peerهای متصل
         let isMuted = false;
         let currentChannel = null;
-        let stream = null; // ذخیره جریان صوتی
+        let localStream = null;
 
-        // دریافت صدا از میکروفون
+        // دریافت صدا از میکروفون و جلوگیری از پخش آن روی دستگاه خود کاربر
         async function getMicrophoneStream() {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                console.log("Microphone access granted.");
-
-                // uncomment to echo on the main device
-                // const audio = document.createElement("audio");
-                // audio.srcObject = stream;
-                // audio.autoplay = true;
-                // document.body.appendChild(audio);
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                console.log("🎤 Microphone access granted.");
 
                 // پردازش صدا برای تشخیص صحبت کردن
                 const audioContext = new AudioContext();
                 const analyser = audioContext.createAnalyser();
                 analyser.fftSize = 512;
-                const microphone = audioContext.createMediaStreamSource(stream);
+                const microphone = audioContext.createMediaStreamSource(localStream);
                 microphone.connect(analyser);
 
                 setInterval(() => {
                     const dataArray = new Uint8Array(analyser.frequencyBinCount);
                     analyser.getByteFrequencyData(dataArray);
                     const volume = dataArray.reduce((a, b) => a + b) / dataArray.length;
-
-                    console.log(`Volume Level: ${volume}`); // نمایش مقدار volume در کنسول
-                    const isSpeaking = volume > 10; // مقدار ممکن است خیلی پایین باشد، می‌توان افزایش داد
+                    
+                    const isSpeaking = volume > 10;
                     socket.emit("user-speaking", { userId: socket.id, isSpeaking });
                 }, 300);
 
-                return stream;
+                return localStream;
             } catch (error) {
-                console.error("Microphone access denied:", error);
-                alert("Please allow microphone access to use voice chat.");
+                console.error("🚨 Microphone access denied:", error);
+                alert("⚠️ Please allow microphone access to use voice chat.");
                 return null;
             }
         }
-
 
         async function joinChannel() {
             currentChannel = document.getElementById("channelId").value;
@@ -72,8 +64,8 @@
                 return;
             }
 
-            stream = await getMicrophoneStream();
-            if (!stream) return;
+            localStream = await getMicrophoneStream();
+            if (!localStream) return;
 
             socket.emit("join-channel", currentChannel);
         }
@@ -88,42 +80,40 @@
         }
 
         function createPeer(userId, initiator) {
-            if (peers[userId]) return peers[userId]; // جلوگیری از ایجاد چندباره‌ی peer
+            if (peers[userId]) return peers[userId];
 
-            console.log(`Creating WebRTC Peer: ${userId}`);
+            console.log(`🔗 Creating WebRTC Peer: ${userId}`);
 
             const peer = new SimplePeer({
                 initiator,
-                trickle: true, // استفاده از true برای جلوگیری از race conditions
-                stream
+                trickle: true,
+                stream: localStream
             });
 
             peer.on("signal", signal => {
-                console.log(`Sending WebRTC signal to ${userId}`);
+                console.log(`📡 Sending WebRTC signal to ${userId}`);
                 socket.emit("webrtc-signal", { signal, to: userId });
             });
 
             peer.on("stream", userStream => {
-                console.log(`Receiving audio stream from ${userId}`);
+                console.log(`🔊 Receiving audio stream from ${userId}`);
+
                 const audio = document.createElement("audio");
                 audio.srcObject = userStream;
                 audio.autoplay = true;
+                audio.muted = false;
                 document.body.appendChild(audio);
+
+                audio.play().then(() => {
+                    console.log(`🎶 Audio from ${userId} is playing.`);
+                }).catch(e => {
+                    console.error("⚠️ Audio play error:", e);
+                });
             });
 
             peer.on("close", () => {
-                console.log(`Peer connection closed: ${userId}`);
+                console.log(`❌ Peer connection closed: ${userId}`);
                 delete peers[userId];
-            });
-
-            // مدیریت مذاکره خودکار
-            peer.on("negotiationneeded", () => {
-                console.log(`Negotiation needed for ${userId}`);
-                peer.createOffer().then(offer => {
-                    return peer.setLocalDescription(offer);
-                }).then(() => {
-                    socket.emit("webrtc-signal", { signal: peer.localDescription, to: userId });
-                }).catch(err => console.error("⚠️ Negotiation error:", err));
             });
 
             peers[userId] = peer;
@@ -131,12 +121,12 @@
         }
 
         socket.on("update-users", (data) => {
-            console.log("Updating user list:", data.users);
+            console.log("🔄 Updating user list:", data.users);
             const userList = document.getElementById("userList");
             userList.innerHTML = ""; // پاک کردن لیست فعلی
 
             data.users.forEach(user => {
-                if (!peers[user] && user !== socket.id) { // ایجاد Peer جدید در صورت نیاز
+                if (!peers[user] && user !== socket.id) {
                     createPeer(user, true);
                 }
 
@@ -146,18 +136,16 @@
                 userList.appendChild(li);
             });
 
-            // ** حذف نام کاربران ترک کرده از لیست **
+            // حذف کاربران ترک کرده
             Object.keys(peers).forEach(userId => {
                 if (!data.users.includes(userId)) {
-                    console.log(`Removing ${userId} from peers list`);
+                    console.log(`❌ Removing ${userId} from peers list`);
                     delete peers[userId];
                 }
             });
         });
 
-
         socket.on("user-speaking", ({ userId, isSpeaking }) => {
-            console.log(`User ${userId} is speaking: ${isSpeaking}`);
             const userElement = document.getElementById(`user-${userId}`);
             if (userElement) {
                 userElement.style.color = isSpeaking ? "green" : "black";
@@ -170,16 +158,15 @@
             }
 
             if (peers[from].destroyed) {
-                console.warn(`Peer connection with ${from} is destroyed. Ignoring signal.`);
+                console.warn(`⚠️ Peer connection with ${from} is destroyed. Ignoring signal.`);
                 return;
             }
 
             try {
-                console.log(`Receiving signal from ${from}:`, signal);
-                
-                // بررسی وضعیت قبل از `setRemoteDescription`
+                console.log(`🔄 Receiving signal from ${from}:`, signal);
+
                 if (signal.type === "answer" && peers[from].signalingState !== "have-local-offer") {
-                    console.warn(`Ignoring answer from ${from} because the signaling state is ${peers[from].signalingState}`);
+                    console.warn(`⚠️ Ignoring answer from ${from} because signaling state is ${peers[from].signalingState}`);
                     return;
                 }
 
@@ -187,19 +174,19 @@
                     peers[from].signal(signal);
                 }, 200);
             } catch (err) {
-                console.error(`WebRTC signal error from ${from}:`, err);
+                console.error(`🚨 WebRTC signal error from ${from}:`, err);
             }
         });
 
         function toggleMute() {
-            if (stream) {
+            if (localStream) {
                 isMuted = !isMuted;
-                stream.getAudioTracks().forEach(track => {
+                localStream.getAudioTracks().forEach(track => {
                     track.enabled = !isMuted;
                 });
-                console.log(isMuted ? "Microphone muted" : "🎤 Microphone unmuted");
+                console.log(isMuted ? "🔇 Microphone muted" : "🎤 Microphone unmuted");
             } else {
-                alert("No active microphone stream.");
+                alert("⚠️ No active microphone stream.");
             }
         }
 
