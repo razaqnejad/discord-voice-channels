@@ -29,8 +29,8 @@
                 console.log("🎤 Microphone access granted.");
                 return localStream;
             } catch (error) {
-                console.error("🚨 Microphone access denied:", error);
-                alert("⚠️ Please allow microphone access to use voice chat.");
+                console.error("Microphone access denied:", error);
+                alert("Please allow microphone access to use voice chat.");
                 return null;
             }
         }
@@ -68,13 +68,13 @@
             });
 
             peer.on("signal", signal => {
-                console.log(`📡 Sending WebRTC signal to ${userId}`);
+                console.log(`Sending WebRTC signal to ${userId}`);
                 socket.emit("webrtc-signal", { signal, to: userId });
             });
 
             peer.on("stream", userStream => {
                 if (!userStream || userStream.getAudioTracks().length === 0) return;
-                console.log(`🔊 Received audio stream from ${userId}`);
+                console.log(`Received audio stream from ${userId}`);
                 const audio = document.createElement("audio");
                 audio.srcObject = userStream;
                 audio.autoplay = true;
@@ -111,7 +111,7 @@
                     if (signal.type === "answer" && peers[from].signalingState !== "have-local-offer") return;
                     peers[from].signal(signal);
                 } catch (err) {
-                    console.error(`🚨 WebRTC signal error from ${from}:`, err);
+                    console.error(`WebRTC signal error from ${from}:`, err);
                 }
             }
         });
@@ -120,7 +120,7 @@
             if (localStream) {
                 isMuted = !isMuted;
                 localStream.getAudioTracks().forEach(track => track.enabled = !isMuted);
-                console.log(isMuted ? "🔇 Microphone muted" : "🎤 Microphone unmuted");
+                console.log(isMuted ? "Microphone muted" : "Microphone unmuted");
             }
         }
 

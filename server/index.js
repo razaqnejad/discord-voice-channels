@@ -15,7 +15,7 @@ const io = new Server(server, {
 app.use(cors());
 
 const port = process.env.PORT || 3000;
-let users = {}; // ذخیره کاربران متصل به Voice Channels
+let users = {};
 
 io.on("connection", (socket) => {
   console.log(`User connected: ${socket.id}`);
@@ -66,18 +66,15 @@ io.on("connection", (socket) => {
   });
 });
 
-// تابع به‌روز‌رسانی لیست کاربران در چنل و ارسال آن به همه‌ی اعضای چنل
 function updateUserList(channelId) {
   const channelUsers = Object.keys(users).filter((id) => users[id] === channelId);
   io.to(channelId).emit("update-users", { channelId, users: channelUsers });
 }
 
-// اجرای سرور
 server.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
 
-// مسیر تست
 app.get("/", (req, res) => {
   res.send("Server is running!");
 });
