@@ -1,18 +1,20 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
-const cors = require("cors");
+const { PeerServer } = require("peer");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-  }
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
 });
 
-app.use(cors());
+// Create PeerJS Server
+const peerServer = PeerServer({ port: 9000, path: "/peerjs" });
+app.use("/peerjs", peerServer);
 
 const port = process.env.PORT || 3000;
 let users = {};
@@ -21,11 +23,12 @@ io.on("connection", (socket) => {
   console.log(`User connected: ${socket.id}`);
 
   socket.on("join-channel", (channelId) => {
-    if (!channelId) return;
-    
+    const { peerId, channelId } = data;
+    if (!peerId || !channelId) return;
+
     socket.join(channelId);
-    users[socket.id] = channelId;
-    console.log(`User ${socket.id} joined channel ${channelId}`);
+    users[socket.id] = { peerId, channelId };
+    console.log(`User ${socket.id} (Peer: ${peerId}) joined channel ${channelId}`);
 
     updateUserList(channelId);
   });
@@ -33,7 +36,7 @@ io.on("connection", (socket) => {
   socket.on("leave-channel", () => {
     if (!users[socket.id]) return;
 
-    const channelId = users[socket.id];
+    const channelId = users[socket.id].channelId;
     socket.leave(channelId);
     delete users[socket.id];
     console.log(`User ${socket.id} left channel ${channelId}`);
@@ -44,7 +47,7 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     if (!users[socket.id]) return;
 
-    const channelId = users[socket.id];
+    const channelId = users[socket.id].channelId;
     delete users[socket.id];
     console.log(`User disconnected: ${socket.id}`);
 
@@ -69,7 +72,10 @@ io.on("connection", (socket) => {
 });
 
 function updateUserList(channelId) {
-  const channelUsers = Object.keys(users).filter((id) => users[id] === channelId);
+  const channelUsers = Object.values(users)
+    .filter(user => user.channelId === channelId)
+    .map(user => user.peerId);
+
   console.log(`Updating user list for channel ${channelId}: ${channelUsers}`);
   io.to(channelId).emit("update-users", { channelId, users: channelUsers });
 }
