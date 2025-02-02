@@ -93,7 +93,7 @@
                 const audio = document.createElement("audio");
                 audio.srcObject = userStream;
                 audio.autoplay = true;
-                audio.controls = true; // Add controls for debugging
+                audio.controls = false; // Add controls for debugging
                 document.body.appendChild(audio);
                 audio.addEventListener('play', () => {
                     console.log(`Audio element for ${userId} is playing`);
