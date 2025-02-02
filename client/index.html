@@ -95,12 +95,12 @@
             });
 
             peer.on("close", () => { delete peers[userId]; });
-            peers[userId] = peer;
-            return peer;
-
             peer.on("iceconnectionstatechange", () => {
                 console.log(`ICE connection state: ${peer.iceConnectionState}`);
             });
+
+            peers[userId] = peer;
+            return peer;
         }
 
         socket.on("update-users", ({ users }) => {
