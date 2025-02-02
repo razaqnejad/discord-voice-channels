@@ -31,18 +31,17 @@
 
     <script>
         const socket = io("https://discord-voice-channels.onrender.com", { transports: ["websocket"], upgrade: false });
-    
+
         const peer = new Peer(undefined, {
-            host: "https://discord-voice-channels.onrender.com",  // Change this to your Render backend
-            port: 9000,
-            path: "/peerjs",
-            secure: true
+            debug: 3 // Uses the free PeerJS cloud server
         });
-    
+
+
         let peers = {};
         let currentChannel = null;
         let localStream = null;
-    
+
+        // Get Microphone Stream
         async function getMicrophoneStream() {
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -54,68 +53,118 @@
                 return null;
             }
         }
-    
+
+        // PeerJS Open Event - Assign Peer ID and Connect to Socket
         peer.on("open", (peerId) => {
             console.log(`PeerJS connected: ${peerId}`);
-    
-            document.getElementById("joinBtn").addEventListener("click", async () => {
-                currentChannel = document.getElementById("channelId").value;
-                if (!currentChannel) {
-                    alert("Please enter a channel ID.");
-                    return;
-                }
-    
-                localStream = await getMicrophoneStream();
-                if (!localStream) return;
-    
-                socket.emit("join-channel", { peerId, channelId: currentChannel });
-            });
         });
-    
-        socket.on("update-users", ({ users }) => {
-            console.log(`Updating users: ${users}`);
-            document.getElementById("userList").innerHTML = "";
-    
-            users.forEach(userId => {
-                if (!peers[userId] && userId !== peer.id) connectToPeer(userId);
-                const li = document.createElement("li");
-                li.textContent = userId;
-                li.id = `user-${userId}`;
-                document.getElementById("userList").appendChild(li);
-            });
-        });
-    
-        function connectToPeer(userId) {
-            console.log(`Connecting to peer: ${userId}`);
-            const call = peer.call(userId, localStream);
-    
-            call.on("stream", (userStream) => {
-                console.log(`Received audio from ${userId}`);
-                const audio = document.createElement("audio");
-                audio.srcObject = userStream;
-                audio.autoplay = true;
-                document.body.appendChild(audio);
-            });
-    
-            call.on("close", () => {
-                console.log(`Call with ${userId} closed.`);
-            });
-    
-            peers[userId] = call;
+
+        // Join a Channel
+        async function joinChannel() {
+            currentChannel = document.getElementById("channelId").value;
+            if (!currentChannel) {
+                alert("Please enter a channel ID.");
+                return;
+            }
+
+            localStream = await getMicrophoneStream();
+            if (!localStream) return;
+
+            console.log(`Joining channel: ${currentChannel}`);
+            socket.emit("join-channel", { peerId: peer.id, channelId: currentChannel });
+
+            // Display Current User
+            updateUserList(peer.id);
         }
-    
+
+        // Handle Incoming Calls
         peer.on("call", (call) => {
             console.log(`Receiving call from ${call.peer}`);
             call.answer(localStream);
-    
+
             call.on("stream", (userStream) => {
                 console.log(`Received audio from ${call.peer}`);
-                const audio = document.createElement("audio");
-                audio.srcObject = userStream;
-                audio.autoplay = true;
-                document.body.appendChild(audio);
+                playAudioStream(userStream);
+            });
+
+            call.on("close", () => {
+                console.log(`Call with ${call.peer} closed.`);
             });
         });
+
+        // When a New User Joins
+        socket.on("user-connected", (peerId) => {
+            console.log("New user joined:", peerId);
+            connectToPeer(peerId);
+        });
+
+        // Handle User Disconnection
+        socket.on("user-disconnected", (peerId) => {
+            console.log("User disconnected:", peerId);
+            if (peers[peerId]) peers[peerId].close();
+            delete peers[peerId];
+            removeUserFromList(peerId);
+        });
+
+        // Connect to New Peer
+        function connectToPeer(userId) {
+            console.log(`Connecting to peer: ${userId}`);
+            const call = peer.call(userId, localStream);
+
+            call.on("stream", (userStream) => {
+                console.log(`Received audio from ${userId}`);
+                playAudioStream(userStream);
+            });
+
+            call.on("close", () => {
+                console.log(`Call with ${userId} closed.`);
+            });
+
+            peers[userId] = call;
+        }
+
+        // Play Audio Stream
+        function playAudioStream(stream) {
+            const audio = document.createElement("audio");
+            audio.srcObject = stream;
+            audio.autoplay = true;
+            document.body.appendChild(audio);
+        }
+
+        // Leave the Channel
+        function leaveChannel() {
+            if (!currentChannel) return;
+
+            console.log(`Leaving channel: ${currentChannel}`);
+            socket.emit("leave-channel");
+
+            Object.values(peers).forEach(peer => peer.close());
+            peers = {};
+            currentChannel = null;
+
+            document.getElementById("userList").innerHTML = "";
+        }
+
+        // Toggle Mute
+        function toggleMute() {
+            if (!localStream) return;
+            localStream.getAudioTracks().forEach(track => (track.enabled = !track.enabled));
+            console.log(localStream.getAudioTracks()[0].enabled ? "Unmuted" : "Muted");
+        }
+
+        // Update User List
+        function updateUserList(userId) {
+            const li = document.createElement("li");
+            li.textContent = userId;
+            li.id = `user-${userId}`;
+            document.getElementById("userList").appendChild(li);
+        }
+
+        // Remove User from List
+        function removeUserFromList(userId) {
+            const userElement = document.getElementById(`user-${userId}`);
+            if (userElement) userElement.remove();
+        }
     </script>    
 </body>
 </html>
