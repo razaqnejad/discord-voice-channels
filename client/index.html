@@ -39,7 +39,7 @@
         async function getMicrophoneStream() {
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                console.log("🎤 Microphone access granted.");
+                console.log("Microphone access granted.");
                 return localStream;
             } catch (error) {
                 console.error("Microphone access denied:", error);
@@ -73,7 +73,7 @@
 
         function createPeer(userId, initiator) {
             if (peers[userId]) return peers[userId];
-            console.log(`🔗 Creating WebRTC Peer: ${userId}`);
+            console.log(`Creating WebRTC Peer: ${userId}`);
 
             const peer = new SimplePeer({
                 initiator,
