@@ -11,38 +11,21 @@
 <body>
     <div class="container">
         <h1>Voice Chat</h1>
-    
-        <!-- Input Section -->
-        <div class="input-container">
-            <input type="text" id="channelId" placeholder="Enter Channel ID">
-        </div>
-    
-        <!-- Buttons -->
-        <div class="button-container">
-            <button onclick="joinChannel()">Join Channel</button>
-            <button onclick="leaveChannel()">Leave Channel</button>
-            <button onclick="toggleMute()">Mute/Unmute</button>
-        </div>
-    
-        <!-- Users -->
+        <input type="text" id="channelId" placeholder="Enter Channel ID">
+        <button onclick="joinChannel()">Join</button>
+        <button onclick="leaveChannel()">Leave</button>
+        <button onclick="toggleMute()">Mute/Unmute</button>
         <h3>Users in Channel</h3>
         <ul id="userList"></ul>
     </div>
 
     <script>
-        const socket = io("https://discordvoicechannels.onrender.com", { 
-            transports: ["websocket"] // Ensure only WebSocket transport is used
-        });
-
-        const peer = new Peer(undefined, {
-            debug: 3 // Uses the free PeerJS cloud server
-        });
-
+        const socket = io("https://discordvoicechannels.onrender.com", { transports: ["websocket"] });
+        const peer = new Peer(undefined, { debug: 3 });
         let peers = {};
         let currentChannel = null;
         let localStream = null;
 
-        // Get Microphone Stream
         async function getMicrophoneStream() {
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -50,81 +33,42 @@
                 return localStream;
             } catch (error) {
                 console.error("Microphone access denied:", error);
-                alert("Please allow microphone access to use voice chat.");
+                alert("Please allow microphone access.");
                 return null;
             }
         }
 
-        // PeerJS Open Event - Assign Peer ID and Connect to Socket
         peer.on("open", (peerId) => {
             console.log(`PeerJS connected: ${peerId}`);
         });
 
-        // Join a Channel
         async function joinChannel() {
             currentChannel = document.getElementById("channelId").value;
-            if (!currentChannel) {
-                alert("Please enter a channel ID.");
-                return;
-            }
-
+            if (!currentChannel) return alert("Enter a channel ID.");
             localStream = await getMicrophoneStream();
             if (!localStream) return;
-
-            console.log(`Joining channel: ${currentChannel}`);
             socket.emit("join-channel", { peerId: peer.id, channelId: currentChannel });
-
-            // Display Current User
-            updateUserList(peer.id);
         }
 
-        // Handle Incoming Calls
         peer.on("call", (call) => {
-            console.log(`Receiving call from ${call.peer}`);
             call.answer(localStream);
-
-            call.on("stream", (userStream) => {
-                console.log(`Received audio from ${call.peer}`);
-                playAudioStream(userStream);
-            });
-
-            call.on("close", () => {
-                console.log(`Call with ${call.peer} closed.`);
-            });
+            call.on("stream", (userStream) => playAudioStream(userStream));
         });
 
-        // When a New User Joins
-        socket.on("user-connected", (peerId) => {
-            console.log("New user joined:", peerId);
-            connectToPeer(peerId);
-        });
-
-        // Handle User Disconnection
+        socket.on("user-connected", (peerId) => connectToPeer(peerId));
         socket.on("user-disconnected", (peerId) => {
-            console.log("User disconnected:", peerId);
             if (peers[peerId]) peers[peerId].close();
             delete peers[peerId];
             removeUserFromList(peerId);
         });
 
-        // Connect to New Peer
         function connectToPeer(userId) {
-            console.log(`Connecting to peer: ${userId}`);
             const call = peer.call(userId, localStream);
-
-            call.on("stream", (userStream) => {
-                console.log(`Received audio from ${userId}`);
-                playAudioStream(userStream);
-            });
-
-            call.on("close", () => {
-                console.log(`Call with ${userId} closed.`);
-            });
-
+            call.on("stream", (userStream) => playAudioStream(userStream));
+            call.on("close", () => console.log(`Call with ${userId} closed.`));
             peers[userId] = call;
         }
 
-        // Play Audio Stream
         function playAudioStream(stream) {
             const audio = document.createElement("audio");
             audio.srcObject = stream;
@@ -132,39 +76,19 @@
             document.body.appendChild(audio);
         }
 
-        // Leave the Channel
         function leaveChannel() {
             if (!currentChannel) return;
-
-            console.log(`Leaving channel: ${currentChannel}`);
             socket.emit("leave-channel");
-
             Object.values(peers).forEach(peer => peer.close());
             peers = {};
             currentChannel = null;
-
             document.getElementById("userList").innerHTML = "";
         }
 
-        // Toggle Mute
         function toggleMute() {
             if (!localStream) return;
             localStream.getAudioTracks().forEach(track => (track.enabled = !track.enabled));
             console.log(localStream.getAudioTracks()[0].enabled ? "Unmuted" : "Muted");
-        }
-
-        // Update User List
-        function updateUserList(userId) {
-            const li = document.createElement("li");
-            li.textContent = userId;
-            li.id = `user-${userId}`;
-            document.getElementById("userList").appendChild(li);
-        }
-
-        // Remove User from List
-        function removeUserFromList(userId) {
-            const userElement = document.getElementById(`user-${userId}`);
-            if (userElement) userElement.remove();
         }
     </script>
 </body>

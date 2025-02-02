@@ -13,10 +13,9 @@ const io = new Server(server, {
     allowedHeaders: ["Content-Type"],
     credentials: true
   },
-  transports: ["websocket"] // Ensure only WebSocket transport is used
+  transports: ["websocket"]
 });
 
-// Create PeerJS Server and attach it to Express
 const peerServer = ExpressPeerServer(server, {
   debug: true,
   path: "/peerjs",
@@ -24,14 +23,12 @@ const peerServer = ExpressPeerServer(server, {
 app.use("/peerjs", peerServer);
 
 const port = process.env.PORT || 3000;
-let users = {}; // Store peerId and channelId mappings
+let users = {};
 
-// Start the server
 server.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`Server running on http://localhost:${port}`);
 });
 
-// Root Route
 app.get("/", (req, res) => {
   res.send("Server is running!");
 });
@@ -39,58 +36,41 @@ app.get("/", (req, res) => {
 io.on("connection", (socket) => {
     console.log(`User connected: ${socket.id}`);
 
-    // User joins a channel
-    socket.on("join-channel", (data) => {
-        const { peerId, channelId } = data;
+    socket.on("join-channel", ({ peerId, channelId }) => {
         if (!peerId || !channelId) return;
 
         socket.join(channelId);
         users[socket.id] = { peerId, channelId };
+        io.to(channelId).emit("user-joined", { peerId });
 
-        io.to(channelId).emit("user-joined", { peerId })
-        console.log(`User ${socket.id} (Peer: ${peerId}) joined channel ${channelId}`);
-
-        // Notify others in the channel
         socket.broadcast.to(channelId).emit("user-connected", peerId);
         updateUserList(channelId);
     });
 
-    // User leaves a channel
     socket.on("leave-channel", () => {
-        if (!users[socket.id]) return;
-
-        const { channelId, peerId } = users[socket.id];
-        socket.leave(channelId);
-        delete users[socket.id];
-
-        console.log(`User ${socket.id} (Peer: ${peerId}) left channel ${channelId}`);
-
-        // Notify others in the channel
-        socket.broadcast.to(channelId).emit("user-disconnected", peerId);
-        updateUserList(channelId);
+        removeUser(socket);
     });
 
-    // Handle disconnection
     socket.on("disconnect", () => {
-        if (!users[socket.id]) return;
-
-        const { channelId, peerId } = users[socket.id];
-        delete users[socket.id];
-
-        console.log(`User disconnected: ${socket.id} (Peer: ${peerId})`);
-
-        // Notify others in the channel
-        socket.broadcast.to(channelId).emit("user-disconnected", peerId);
-        updateUserList(channelId);
+        removeUser(socket);
     });
 });
 
-// Update the list of active users in a channel
+function removeUser(socket) {
+    if (!users[socket.id]) return;
+
+    const { channelId, peerId } = users[socket.id];
+    delete users[socket.id];
+    console.log(`User disconnected: ${socket.id} (Peer: ${peerId})`);
+
+    socket.broadcast.to(channelId).emit("user-disconnected", peerId);
+    updateUserList(channelId);
+}
+
 function updateUserList(channelId) {
     const channelUsers = Object.values(users)
         .filter(user => user.channelId === channelId)
         .map(user => user.peerId);
 
-    console.log(`Updating user list for channel ${channelId}: ${channelUsers}`);
     io.to(channelId).emit("update-users", { channelId, users: channelUsers });
 }
