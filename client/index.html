@@ -31,8 +31,7 @@
 
     <script>
         const socket = io("wss://discordvoicechannels.onrender.com", { 
-            transports: ["websocket"], 
-            upgrade: false 
+            transports: ["websocket"]
         });
 
         const peer = new Peer(undefined, {
