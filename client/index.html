@@ -122,6 +122,7 @@
         });
 
         socket.on("webrtc-signal", ({ signal, from }) => {
+            console.log(`Received WebRTC signal from ${from}`);
             if (!peers[from]) createPeer(from, false);
             if (peers[from] && !peers[from].destroyed) {
                 try {
