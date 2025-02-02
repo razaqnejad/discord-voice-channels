@@ -55,6 +55,7 @@ io.on("connection", (socket) => {
     const channelId = users[socket.id];
     if (!channelId) return;
 
+    console.log(`User ${data.userId} is ${data.isSpeaking ? "speaking" : "not speaking"}`);
     io.to(channelId).emit("user-speaking", data);
   });
 
@@ -62,12 +63,14 @@ io.on("connection", (socket) => {
     const { signal, to } = data;
     if (!to || !users[to] || users[to] !== users[socket.id]) return;
 
+    console.log(`Relaying WebRTC signal from ${socket.id} to ${to}`);
     io.to(to).emit("webrtc-signal", { signal, from: socket.id });
   });
 });
 
 function updateUserList(channelId) {
   const channelUsers = Object.keys(users).filter((id) => users[id] === channelId);
+  console.log(`Updating user list for channel ${channelId}: ${channelUsers}`);
   io.to(channelId).emit("update-users", { channelId, users: channelUsers });
 }
 
