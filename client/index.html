@@ -11,10 +11,20 @@
 <body>
     <div class="container">
         <h1>Voice Chat</h1>
-        <input type="text" id="channelId" placeholder="Enter Channel ID">
-        <button onclick="joinChannel()">Join</button>
-        <button onclick="leaveChannel()">Leave</button>
-        <button onclick="toggleMute()">Mute/Unmute</button>
+    
+        <!-- Input Section -->
+        <div class="input-container">
+            <input type="text" id="channelId" placeholder="Enter Channel ID">
+        </div>
+    
+        <!-- Buttons -->
+        <div class="button-container">
+            <button onclick="joinChannel()">Join Channel</button>
+            <button onclick="leaveChannel()">Leave Channel</button>
+            <button onclick="toggleMute()">Mute/Unmute</button>
+        </div>
+    
+        <!-- Users -->
         <h3>Users in Channel</h3>
         <ul id="userList"></ul>
     </div>
