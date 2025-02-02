@@ -12,9 +12,8 @@
   "description": "",
   "dependencies": {
     "discord-voice-channels": "file:",
-    "peer": "^1.4.7",
     "express": "^4.21.2",
-    "socket.io": "^4.8.1",
-    "simple-peer": "^9.11.1"
+    "peer": "^0.6.1",
+    "socket.io": "^4.8.1"
   }
 }
