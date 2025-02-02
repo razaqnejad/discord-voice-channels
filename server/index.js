@@ -13,7 +13,7 @@ const io = new Server(server, {
     allowedHeaders: ["Content-Type"],
     credentials: true
   },
-  transports: ["websocket", "polling"]
+  transports: ["websocket"] // Ensure only WebSocket transport is used
 });
 
 // Create PeerJS Server and attach it to Express
