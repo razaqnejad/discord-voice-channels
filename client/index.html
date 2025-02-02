@@ -30,7 +30,8 @@
     </div>
 
     <script>
-        const socket = io("https://discordvoicechannels.onrender.com", { transports: ["websocket"] });
+        const socket = io("https://discordvoicechannels.onrender.com", { 
+            transports: ["polling", "websocket"] }); // Allow both transports
         const peer = new Peer(undefined, { debug: 3 });
         let peers = {};
         let currentChannel = null;

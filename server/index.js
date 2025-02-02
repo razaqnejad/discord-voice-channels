@@ -13,7 +13,7 @@ const io = new Server(server, {
     allowedHeaders: ["Content-Type"],
     credentials: true
   },
-  transports: ["websocket"]
+  transports: ["polling", "websocket"] // Allow both transports
 });
 
 const peerServer = ExpressPeerServer(server, {
