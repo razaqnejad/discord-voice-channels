@@ -5,24 +5,36 @@ const { ExpressPeerServer } = require("peer");
 
 const app = express();
 const server = http.createServer(app);
+
 const io = new Server(server, {
   cors: {
-    origin: "*",   // Allow all origins (you can restrict this later)
-    methods: ["GET", "POST"]
+    origin: "*",
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type"],
+    credentials: true
   },
-  transports: ["websocket"]
+  transports: ["websocket", "polling"]
 });
 
 // Create PeerJS Server and attach it to Express
 const peerServer = ExpressPeerServer(server, {
   debug: true,
   path: "/peerjs",
-  allow_discovery: true
 });
 app.use("/peerjs", peerServer);
 
 const port = process.env.PORT || 3000;
 let users = {}; // Store peerId and channelId mappings
+
+// Start the server
+server.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
+
+// Root Route
+app.get("/", (req, res) => {
+  res.send("Server is running!");
+});
 
 io.on("connection", (socket) => {
     console.log(`User connected: ${socket.id}`);
@@ -35,6 +47,7 @@ io.on("connection", (socket) => {
         socket.join(channelId);
         users[socket.id] = { peerId, channelId };
 
+        io.to(channelId).emit("user-joined", { peerId })
         console.log(`User ${socket.id} (Peer: ${peerId}) joined channel ${channelId}`);
 
         // Notify others in the channel
@@ -81,13 +94,3 @@ function updateUserList(channelId) {
     console.log(`Updating user list for channel ${channelId}: ${channelUsers}`);
     io.to(channelId).emit("update-users", { channelId, users: channelUsers });
 }
-
-// Start the server
-server.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-});
-
-// Root Route
-app.get("/", (req, res) => {
-    res.send("Server is running!");
-});
