@@ -31,13 +31,12 @@
 
     <script>
         const socket = io("https://discordvoicechannels.onrender.com", { 
-            transports: ["websocket"]
+            transports: ["websocket"] // Ensure only WebSocket transport is used
         });
 
         const peer = new Peer(undefined, {
             debug: 3 // Uses the free PeerJS cloud server
         });
-
 
         let peers = {};
         let currentChannel = null;
