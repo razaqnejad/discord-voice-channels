@@ -6,16 +6,18 @@ const { ExpressPeerServer } = require("peer");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
+  cors: {
+    origin: "*",   // Allow all origins (you can restrict this later)
+    methods: ["GET", "POST"]
+  },
+  transports: ["websocket"]
 });
 
 // Create PeerJS Server and attach it to Express
 const peerServer = ExpressPeerServer(server, {
-    path: "/peerjs",
-    debug: true
+  debug: true,
+  path: "/peerjs",
+  allow_discovery: true
 });
 app.use("/peerjs", peerServer);
 
