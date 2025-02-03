@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Voice Chat</title>
     <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -31,18 +31,11 @@
 
     <script>
         const socket = io("https://discord-voice-channels.onrender.com", { transports: ["websocket"], upgrade: false });
-    
-        const peer = new Peer(undefined, {
-            host: "https://discord-voice-channels.onrender.com",  // Change this to your Render backend
-            port: 9000,
-            path: "/peerjs",
-            secure: true
-        });
-    
-        let peers = {};
+        let peers = {}; 
+        let isMuted = false;
         let currentChannel = null;
         let localStream = null;
-    
+
         async function getMicrophoneStream() {
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -54,68 +47,142 @@
                 return null;
             }
         }
-    
-        peer.on("open", (peerId) => {
-            console.log(`PeerJS connected: ${peerId}`);
-    
-            document.getElementById("joinBtn").addEventListener("click", async () => {
-                currentChannel = document.getElementById("channelId").value;
-                if (!currentChannel) {
-                    alert("Please enter a channel ID.");
-                    return;
+
+        async function joinChannel() {
+            currentChannel = document.getElementById("channelId").value;
+            if (!currentChannel) {
+                alert("Please enter a channel ID.");
+                return;
+            }
+            localStream = await getMicrophoneStream();
+            if (!localStream) return;
+            console.log(`Joining channel: ${currentChannel}`);
+            socket.emit("join-channel", currentChannel);
+            startSpeakingDetection();
+        }
+
+        function leaveChannel() {
+            if (currentChannel) {
+                console.log(`Leaving channel: ${currentChannel}`);
+                socket.emit("leave-channel");
+                Object.values(peers).forEach(peer => peer.destroy());
+                peers = {};
+                currentChannel = null;
+            }
+        }
+
+        function createPeer(userId, initiator) {
+            if (peers[userId]) return peers[userId];
+            console.log(`Creating WebRTC Peer: ${userId}`);
+
+            const peer = new SimplePeer({
+                initiator,
+                trickle: true,
+                stream: localStream,
+                config: {
+                    iceServers: [
+                        { urls: "stun:stun.l.google.com:19302" },
+                        {
+                            urls: "turn:relay.metered.ca:443",
+                            username: "open",
+                            credential: "open"
+                        }
+                    ]
                 }
-    
-                localStream = await getMicrophoneStream();
-                if (!localStream) return;
-    
-                socket.emit("join-channel", { peerId, channelId: currentChannel });
             });
-        });
-    
+
+            peer.on("signal", signal => {
+                console.log(`Sending WebRTC signal to ${userId}`);
+                socket.emit("webrtc-signal", { signal, to: userId });
+            });
+
+            peer.on("stream", userStream => {
+                if (!userStream || userStream.getAudioTracks().length === 0) return;
+                console.log(`Received audio stream from ${userId}`);
+                const audio = document.createElement("audio");
+                audio.srcObject = userStream;
+                audio.autoplay = true;
+                audio.controls = false; // Add controls for debugging
+                document.body.appendChild(audio);
+                audio.addEventListener('play', () => {
+                    console.log(`Audio element for ${userId} is playing`);
+                });
+                audio.addEventListener('error', (e) => {
+                    console.error(`Error playing audio element for ${userId}:`, e);
+                });
+            });
+
+            peer.on("close", () => { 
+                console.log(`Peer connection closed: ${userId}`);
+                delete peers[userId]; 
+            });
+            peer.on("iceconnectionstatechange", () => {
+                console.log(`ICE connection state: ${peer.iceConnectionState}`);
+                if (peer.iceConnectionState === 'failed' || peer.iceConnectionState === 'disconnected') {
+                    console.error(`ICE connection failed or disconnected for peer: ${userId}`);
+                }
+            });
+
+            peers[userId] = peer;
+            return peer;
+        }
+
         socket.on("update-users", ({ users }) => {
             console.log(`Updating users: ${users}`);
             document.getElementById("userList").innerHTML = "";
-    
-            users.forEach(userId => {
-                if (!peers[userId] && userId !== peer.id) connectToPeer(userId);
+            users.forEach(user => {
+                if (!peers[user] && user !== socket.id) createPeer(user, true);
                 const li = document.createElement("li");
-                li.textContent = userId;
-                li.id = `user-${userId}`;
+                li.textContent = user;
+                li.id = `user-${user}`;
                 document.getElementById("userList").appendChild(li);
             });
         });
-    
-        function connectToPeer(userId) {
-            console.log(`Connecting to peer: ${userId}`);
-            const call = peer.call(userId, localStream);
-    
-            call.on("stream", (userStream) => {
-                console.log(`Received audio from ${userId}`);
-                const audio = document.createElement("audio");
-                audio.srcObject = userStream;
-                audio.autoplay = true;
-                document.body.appendChild(audio);
-            });
-    
-            call.on("close", () => {
-                console.log(`Call with ${userId} closed.`);
-            });
-    
-            peers[userId] = call;
-        }
-    
-        peer.on("call", (call) => {
-            console.log(`Receiving call from ${call.peer}`);
-            call.answer(localStream);
-    
-            call.on("stream", (userStream) => {
-                console.log(`Received audio from ${call.peer}`);
-                const audio = document.createElement("audio");
-                audio.srcObject = userStream;
-                audio.autoplay = true;
-                document.body.appendChild(audio);
-            });
+
+        socket.on("user-speaking", ({ userId, isSpeaking }) => {
+            console.log(`User ${userId} is ${isSpeaking ? "speaking" : "not speaking"}`);
+            const userElement = document.getElementById(`user-${userId}`);
+            if (userElement) {
+                userElement.style.color = isSpeaking ? "white" : "#6f6f6f";
+            }
         });
-    </script>    
+
+        socket.on("webrtc-signal", ({ signal, from }) => {
+            console.log(`Received WebRTC signal from ${from}`);
+            if (!peers[from]) createPeer(from, false);
+            if (peers[from] && !peers[from].destroyed) {
+                try {
+                    if (signal.type === "answer" && peers[from].signalingState !== "have-local-offer") return;
+                    peers[from].signal(signal);
+                } catch (err) {
+                    console.error(`WebRTC signal error from ${from}:`, err);
+                }
+            }
+        });
+
+        function toggleMute() {
+            if (localStream) {
+                isMuted = !isMuted;
+                localStream.getAudioTracks().forEach(track => track.enabled = !isMuted);
+                console.log(isMuted ? "Microphone muted" : "Microphone unmuted");
+            }
+        }
+
+        function startSpeakingDetection() {
+            const audioContext = new AudioContext();
+            const analyser = audioContext.createAnalyser();
+            analyser.fftSize = 512;
+            const microphone = audioContext.createMediaStreamSource(localStream);
+            microphone.connect(analyser);
+
+            setInterval(() => {
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                analyser.getByteFrequencyData(dataArray);
+                const volume = dataArray.reduce((a, b) => a + b) / dataArray.length;
+                const isSpeaking = volume > 10;
+                socket.emit("user-speaking", { userId: socket.id, isSpeaking });
+            }, 300);
+        }
+    </script>
 </body>
 </html>
