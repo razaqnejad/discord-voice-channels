@@ -30,7 +30,7 @@ io.on("connection", (socket) => {
     if (!peerId || !channelId) return;
 
     socket.join(channelId);
-    users[socket.id] = { peerId, channelId };
+    // users[socket.id] = { peerId, channelId };
     console.log(`User ${socket.id} (Peer: ${peerId}) joined channel ${channelId}`);
 
     updateUserList(channelId);
