@@ -26,14 +26,14 @@ io.on("connection", (socket) => {
   console.log(`User connected: ${socket.id}`);
 
   socket.on("join-channel", (channelId) => {
-    const { peerId, channelId } = data;
-    if (!peerId || !channelId) return;
+    const { peerId, channelId: channelIdFromData } = data;
+    if (!peerId || !channelIdFromData) return;
 
-    socket.join(channelId);
-    // users[socket.id] = { peerId, channelId };
-    console.log(`User ${socket.id} (Peer: ${peerId}) joined channel ${channelId}`);
+    socket.join(channelIdFromData);
+    users[socket.id] = { peerId, channelId: channelIdFromData };
+    console.log(`User ${socket.id} (Peer: ${peerId}) joined channel ${channelIdFromData}`);
 
-    updateUserList(channelId);
+    updateUserList(channelIdFromData);
   });
 
   socket.on("leave-channel", () => {
