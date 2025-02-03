@@ -12,19 +12,16 @@
     <div class="container">
         <h1>Voice Chat</h1>
     
-        <!-- Input Section -->
         <div class="input-container">
             <input type="text" id="channelId" placeholder="Enter Channel ID">
         </div>
     
-        <!-- Buttons -->
         <div class="button-container">
             <button onclick="joinChannel()">Join Channel</button>
             <button onclick="leaveChannel()">Leave Channel</button>
             <button onclick="toggleMute()">Mute/Unmute</button>
         </div>
     
-        <!-- Users -->
         <h3>Users in Channel</h3>
         <ul id="userList"></ul>
     </div>
@@ -99,23 +96,37 @@
             peer.on("stream", userStream => {
                 if (!userStream || userStream.getAudioTracks().length === 0) return;
                 console.log(`Received audio stream from ${userId}`);
-                const audio = document.createElement("audio");
+                console.log("Remote audio track enabled:", userStream.getAudioTracks()[0]?.enabled);
+
+                const audio = new Audio();
                 audio.srcObject = userStream;
                 audio.autoplay = true;
-                audio.controls = false; // Add controls for debugging
                 document.body.appendChild(audio);
-                audio.addEventListener('play', () => {
-                    console.log(`Audio element for ${userId} is playing`);
+
+                audio.play().then(() => {
+                    console.log(`Audio for ${userId} is playing.`);
+                }).catch(e => {
+                    console.error(`Error playing audio for ${userId}:`, e);
                 });
-                audio.addEventListener('error', (e) => {
-                    console.error(`Error playing audio element for ${userId}:`, e);
-                });
+
+                // Ensure AudioContext is resumed (prevents suspended state)
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === "suspended") {
+                    audioCtx.resume().then(() => console.log("AudioContext resumed"));
+                }
+
+                // Route through Web Audio API for better control
+                const source = audioCtx.createMediaStreamSource(userStream);
+                const gainNode = audioCtx.createGain();
+                gainNode.gain.value = 1; 
+                source.connect(gainNode).connect(audioCtx.destination);
             });
 
             peer.on("close", () => { 
                 console.log(`Peer connection closed: ${userId}`);
                 delete peers[userId]; 
             });
+
             peer.on("iceconnectionstatechange", () => {
                 console.log(`ICE connection state: ${peer.iceConnectionState}`);
                 if (peer.iceConnectionState === 'failed' || peer.iceConnectionState === 'disconnected') {
@@ -183,6 +194,16 @@
                 socket.emit("user-speaking", { userId: socket.id, isSpeaking });
             }, 300);
         }
+
+        // Debug: Log audio output devices
+        navigator.mediaDevices.enumerateDevices().then(devices => {
+            console.log("Available devices:", devices);
+            devices.forEach(device => {
+                if (device.kind === "audiooutput") {
+                    console.log("Audio output:", device.label, device.deviceId);
+                }
+            });
+        });
     </script>
 </body>
 </html>
