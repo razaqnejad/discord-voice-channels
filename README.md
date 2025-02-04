@@ -30,12 +30,12 @@ Web Engineering by Dr. Zamaniyan - KNTU
         <div>
             <strong>Angry</strong>
             <br>
-            <img src="screen-shots/Idle.png" width="200" style="margin-top: 10px;">
+            <img src="screen-shots/Idle.png" width="600" style="margin-top: 10px;">
         </div>
         <div style="margin-top: 10px;">
             <strong>Happy</strong>
             <br>
-            <img src="screen-shots/join.png" width="200" style="margin-top: 10px;">
+            <img src="screen-shots/join.png" width="600" style="margin-top: 10px;">
         </div>
     </div>
     <!-- <div style="margin-right: 20px;">
