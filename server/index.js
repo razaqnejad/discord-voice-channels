@@ -3,6 +3,23 @@ const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
 
+const mongoose = require("mongoose");
+
+const mongoURI = "mongodb+srv://razaqnejad:<r914e59g>@cluster0.zpb4c.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+mongoose.connect(mongoURI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+}).then(() => console.log("Connected to MongoDB"))
+.catch(err => console.error("MongoDB connection error:", err));
+
+const channelSchema = new mongoose.Schema({
+  channelId: String,
+  currentUsers: { type: Number, default: 0 },
+  maxUsers: { type: Number, default: 0 }
+});
+
+const Channel = mongoose.model("Channel", channelSchema);
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -22,10 +39,27 @@ io.on("connection", (socket) => {
 
   socket.on("join-channel", (channelId) => {
     if (!channelId) return;
-    
+
     socket.join(channelId);
     users[socket.id] = channelId;
     console.log(`User ${socket.id} joined channel ${channelId}`);
+
+    // Update channel data in DB
+    Channel.findOne({ channelId }).then(channel => {
+      if (!channel) {
+        // If channel doesn't exist, create a new channel
+        channel = new Channel({ channelId, currentUsers: 1, maxUsers: 1 });
+      } else {
+        // Increase the current user count
+        channel.currentUsers += 1;
+        // Update maxUsers if currentUsers exceeds maxUsers
+        if (channel.currentUsers > channel.maxUsers) {
+          channel.maxUsers = channel.currentUsers;
+        }
+      }
+      return channel.save();
+    }).then(() => console.log(`Channel data updated for ${channelId}`))
+      .catch(err => console.error("Error updating channel:", err));
 
     updateUserList(channelId);
   });
@@ -38,6 +72,15 @@ io.on("connection", (socket) => {
     delete users[socket.id];
     console.log(`User ${socket.id} left channel ${channelId}`);
 
+    // Update channel data in DB when a user leaves
+    Channel.findOne({ channelId }).then(channel => {
+      if (channel) {
+        channel.currentUsers = Math.max(0, channel.currentUsers - 1); // Ensure currentUsers doesn't go below 0
+        return channel.save();
+      }
+    }).then(() => console.log(`Channel data updated for ${channelId}`))
+      .catch(err => console.error("Error updating channel:", err));
+
     updateUserList(channelId);
   });
 
@@ -47,6 +90,15 @@ io.on("connection", (socket) => {
     const channelId = users[socket.id];
     delete users[socket.id];
     console.log(`User disconnected: ${socket.id}`);
+
+    // Update channel data in DB when a user disconnects
+    Channel.findOne({ channelId }).then(channel => {
+      if (channel) {
+        channel.currentUsers = Math.max(0, channel.currentUsers - 1);
+        return channel.save();
+      }
+    }).then(() => console.log(`Channel data updated for ${channelId}`))
+      .catch(err => console.error("Error updating channel:", err));
 
     updateUserList(channelId);
   });
