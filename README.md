@@ -1,6 +1,6 @@
 # discord-voice-channels
 
-This project tries to simulate Discord parallel voice chat system
+This project tries to simliate Discord parallel voice chat system
 **Open Github to see the README images**
 
 ## Authors
@@ -34,16 +34,16 @@ Web Engineering by Dr. Zamaniyan - KNTU
         </div>
         <div style="margin-top: 10px;">
             <h2>All the actions happening on the server side are being described in the console log to make it easy to debug</h2>
-            <ul>Information of the confined input device (Microphone)</ul>
-            <ul>Information of the confined output device (Speakers)</ul>
-            <ul>Inform to grant mics access</ul>
-            <ul>Information of the channel user joined</ul>
-            <ul>Information of the other users in the channel</ul>
-            <ul>Information of speaking peers</ul>
-            <ul>Information of transferring WebRTC signals</ul>
-            <ul>Information of leaving users</ul>
-            <ul>Inform to mute/unmute mics</ul>
-            <ul>Inform to leave the channel</ul>
+            <li>Information of the confined input device (Microphone)</li>
+            <li>Information of the confined output device (Speakers)</li>
+            <li>Inform to grant mics access</li>
+            <li>Information of the channel user joined</li>
+            <li>Information of the other users in the channel</li>
+            <li>Information of speaking peers</li>
+            <li>Information of transferring WebRTC signals</li>
+            <li>Information of leaving users</li>
+            <li>Inform to mute/unmute mics</li>
+            <li>Inform to leave the channel</li>
             <br>
             <img src="screen-shots/join.png" width=100% style="margin-top: 10px;">
         </div>
