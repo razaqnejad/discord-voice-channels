@@ -30,7 +30,7 @@ Web Engineering by Dr. Zamaniyan - KNTU
         <div>
             <h2> Here you can see what the overall website looks like:</h2>
             <br>
-            <img src="screen-shots/Idle.png" width="600" style="margin-top: 10px;">
+            <img src="screen-shots/Idle.png" width=100% style="margin-top: 10px;">
         </div>
         <div style="margin-top: 10px;">
             <h2>All the actions happening on the server side are being described in the console log to make it easy to debug</h2>
@@ -45,12 +45,12 @@ Web Engineering by Dr. Zamaniyan - KNTU
             <ul>Inform to mute/unmute mics</ul>
             <ul>Inform to leave the channel</ul>
             <br>
-            <img src="screen-shots/join.png" width="600" style="margin-top: 10px;">
+            <img src="screen-shots/join.png" width=100% style="margin-top: 10px;">
         </div>
         <div style="margin-top: 10px;">
             <h2>For Analyzing user's tastes, the channels information will be kept in database</h2>
             <br>
-            <img src="screen-shots/Backend.png" width="600" style="margin-top: 10px;">
+            <img src="screen-shots/Backend.png" width=100% style="margin-top: 10px;">
         </div>
     </div>
 </div>
