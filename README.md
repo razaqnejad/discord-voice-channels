@@ -29,12 +29,12 @@ Web Engineering by Dr. Zamaniyan - KNTU
 <div style="display: flex; align-items: flex-start;">
     <div style="margin-right: 20px;">
         <div>
-            <h4> Here you can see how does the overall website look like:</h4>
+            <h2> Here you can see how does the overall website look like:</h2>
             <br>
             <img src="screen-shots/Idle.png" width="600" style="margin-top: 10px;">
         </div>
         <div style="margin-top: 10px;">
-            <h4>All the actions happening on the server side are being described in the console log to make it easy to debug</h4>
+            <h2>All the actions happening on the server side are being described in the console log to make it easy to debug</h2>
             <ul>Information of the confined input device (Microphone)</ul>
             <ul>Information of the confined output device (Speakers)</ul>
             <ul>Inform to grant mics access</ul>
@@ -49,7 +49,7 @@ Web Engineering by Dr. Zamaniyan - KNTU
             <img src="screen-shots/join.png" width="600" style="margin-top: 10px;">
         </div>
         <div style="margin-top: 10px;">
-            <h4>For Analyzing users tastes, the channels information will be hekpt in database</h4>
+            <h2>For Analyzing users tastes, the channels information will be hekpt in database</h2>
             <br>
             <img src="screen-shots/Backend.png" width="600" style="margin-top: 10px;">
         </div>
