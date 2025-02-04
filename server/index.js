@@ -5,7 +5,7 @@ const cors = require("cors");
 
 const mongoose = require("mongoose");
 
-const mongoURI = "mongodb+srv://razaqnejad:<r914e59g>@cluster0.zpb4c.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+const mongoURI = "mongodb+srv://razaqnejad:SH4v51PbgPX15P90@cluster0.zpb4c.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 mongoose.connect(mongoURI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
