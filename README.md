@@ -1,6 +1,7 @@
 # discord-voice-channels
 
 This project tries to simulate discord parrallel voice chat system
+**Open Github to see the README images**
 
 ## Authors
 - Fatemeh Reazaqnejad
