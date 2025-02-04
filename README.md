@@ -29,27 +29,33 @@ Web Engineering by Dr. Zamaniyan - KNTU
 <div style="display: flex; align-items: flex-start;">
     <div style="margin-right: 20px;">
         <div>
-            <strong>Angry</strong>
+            <strong>Idle</strong>
+            <h4> Here you can see how does the overall website look like:</h4>
             <br>
             <img src="screen-shots/Idle.png" width="600" style="margin-top: 10px;">
         </div>
         <div style="margin-top: 10px;">
-            <strong>Happy</strong>
+            <strong>Join</strong>
+            <h4>All the actions happening on the server side are being described in the console log to make it easy to debug</h4>
+            <ul>Information of the confined input device (Microphone)</ul>
+            <ul>Information of the confined output device (Speakers)</ul>
+            <ul>Inform to grant mics access</ul>
+            <ul>Information of the channel user joined</ul>
+            <ul>Information of the other users in the channel</ul>
+            <ul>Information of speaking peers</ul>
+            <ul>Information of transferring WebRTC signals</ul>
+            <ul>Information of leaving users</ul>
+            <ul>Inform to mute/unmute mics</ul>
+            <ul>Inform to leave the channel</ul>
             <br>
             <img src="screen-shots/join.png" width="600" style="margin-top: 10px;">
         </div>
-    </div>
-    <!-- <div style="margin-right: 20px;">
-        <div>
-            <strong>Surprise</strong>
-            <br>
-            <img src="media/Real_Time/surprise.png" width="200" style="margin-top: 10px;">
-        </div>
         <div style="margin-top: 10px;">
-            <strong>Sad</strong>
+            <strong>Back</strong>
+            <h4>For Analyzing users tastes, the channels information will be hekpt in database</h4>
             <br>
-            <img src="media/Real_Time/sad.png" width="200" style="margin-top: 10px;">
+            <img src="screen-shots/Backend.png" width="600" style="margin-top: 10px;">
         </div>
-    </div> -->
+    </div>
 </div>
 
