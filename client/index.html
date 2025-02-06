@@ -27,7 +27,9 @@
     </div>
 
     <script>
-        const socket = io("https://discordvoicechannels.onrender.com", { transports: ["websocket"], upgrade: false });
+        const SERVER_URL = "https://discordvoicechannels.onrender.com";
+        const socket = io(SERVER_URL, { transports: ["websocket"], upgrade: false });
+
         let peers = {}; 
         let isMuted = false;
         let currentChannel = null;
@@ -46,7 +48,7 @@
         }
 
         async function joinChannel() {
-            currentChannel = document.getElementById("channelId").value;
+            currentChannel = document.getElementById("channelId").value.trim();
             if (!currentChannel) {
                 alert("Please enter a channel ID.");
                 return;
@@ -96,7 +98,6 @@
             peer.on("stream", userStream => {
                 if (!userStream || userStream.getAudioTracks().length === 0) return;
                 console.log(`Received audio stream from ${userId}`);
-                console.log("Remote audio track enabled:", userStream.getAudioTracks()[0]?.enabled);
 
                 const audio = new Audio();
                 audio.srcObject = userStream;
@@ -109,7 +110,6 @@
                     console.error(`Error playing audio for ${userId}:`, e);
                 });
 
-                // Ensure AudioContext is resumed (prevents suspended state)
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 if (audioCtx.state === "suspended") {
                     audioCtx.resume().then(() => console.log("AudioContext resumed"));
@@ -127,12 +127,12 @@
                 delete peers[userId]; 
             });
 
-            peer.on("iceconnectionstatechange", () => {
-                console.log(`ICE connection state: ${peer.iceConnectionState}`);
-                if (peer.iceConnectionState === 'failed' || peer.iceConnectionState === 'disconnected') {
-                    console.error(`ICE connection failed or disconnected for peer: ${userId}`);
-                }
-            });
+            // peer.on("iceconnectionstatechange", () => {
+            //     console.log(`ICE connection state: ${peer.iceConnectionState}`);
+            //     if (peer.iceConnectionState === 'failed' || peer.iceConnectionState === 'disconnected') {
+            //         console.error(`ICE connection failed or disconnected for peer: ${userId}`);
+            //     }
+            // });
 
             peers[userId] = peer;
             return peer;
@@ -163,7 +163,7 @@
             if (!peers[from]) createPeer(from, false);
             if (peers[from] && !peers[from].destroyed) {
                 try {
-                    if (signal.type === "answer" && peers[from].signalingState !== "have-local-offer") return;
+                    // if (signal.type === "answer" && peers[from].signalingState !== "have-local-offer") return;
                     peers[from].signal(signal);
                 } catch (err) {
                     console.error(`WebRTC signal error from ${from}:`, err);
@@ -195,7 +195,11 @@
             }, 300);
         }
 
-        // Debug: Log audio output devices
+        if (window.location.protocol !== "https:") {
+            alert("Please use HTTPS for this application to work properly.");
+            window.location.href = "https://" + window.location.host + window.location.pathname;
+        }
+
         navigator.mediaDevices.enumerateDevices().then(devices => {
             console.log("Available devices:", devices);
             devices.forEach(device => {

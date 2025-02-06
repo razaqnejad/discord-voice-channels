@@ -1,8 +1,8 @@
 const express = require("express");
-const http = require("http");
+const https = require("https");
+const fs = require("fs");
 const { Server } = require("socket.io");
 const cors = require("cors");
-
 const mongoose = require("mongoose");
 
 const mongoURI = "mongodb+srv://razaqnejad:SH4v51PbgPX15P90@cluster0.zpb4c.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
@@ -21,17 +21,28 @@ const channelSchema = new mongoose.Schema({
 const Channel = mongoose.model("Channel", channelSchema);
 
 const app = express();
-const server = http.createServer(app);
+
+app.use(cors({
+  origin: process.env.CLIENT_ORIGIN || "https://discord-voicechannels.vercel.app/",
+  methods: ["GET", "POST"]
+}));
+
+app.use((req, res, next) => {
+  if (req.headers["x-forwarded-proto"] !== "https") {
+    return res.redirect("https://" + req.headers.host + req.url);
+  }
+  next();
+});
+
+const server = https.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: process.env.CLIENT_ORIGIN || "https://discord-voicechannels.vercel.app/",
     methods: ["GET", "POST"]
   }
 });
 
-app.use(cors());
-
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 10000;
 let users = {};
 
 io.on("connection", (socket) => {
@@ -39,12 +50,11 @@ io.on("connection", (socket) => {
 
   socket.on("join-channel", (channelId) => {
     if (!channelId) return;
-
     socket.join(channelId);
     users[socket.id] = channelId;
     console.log(`User ${socket.id} joined channel ${channelId}`);
 
-    // Update channel data in DB
+    // بروزرسانی دیتابیس
     Channel.findOne({ channelId }).then(channel => {
       if (!channel) {
         // If channel doesn't exist, create a new channel
@@ -58,8 +68,7 @@ io.on("connection", (socket) => {
         }
       }
       return channel.save();
-    }).then(() => console.log(`Channel data updated for ${channelId}`))
-      .catch(err => console.error("Error updating channel:", err));
+    }).catch(err => console.error("Error updating channel:", err));
 
     updateUserList(channelId);
   });
@@ -97,8 +106,7 @@ io.on("connection", (socket) => {
         channel.currentUsers = Math.max(0, channel.currentUsers - 1);
         return channel.save();
       }
-    }).then(() => console.log(`Channel data updated for ${channelId}`))
-      .catch(err => console.error("Error updating channel:", err));
+    }).catch(err => console.error("Error updating channel:", err));
 
     updateUserList(channelId);
   });
@@ -106,7 +114,6 @@ io.on("connection", (socket) => {
   socket.on("user-speaking", (data) => {
     const channelId = users[socket.id];
     if (!channelId) return;
-
     console.log(`User ${data.userId} is ${data.isSpeaking ? "speaking" : "not speaking"}`);
     io.to(channelId).emit("user-speaking", data);
   });
@@ -114,7 +121,6 @@ io.on("connection", (socket) => {
   socket.on("webrtc-signal", (data) => {
     const { signal, to } = data;
     if (!to || !users[to] || users[to] !== users[socket.id]) return;
-
     console.log(`Relaying WebRTC signal from ${socket.id} to ${to}`);
     io.to(to).emit("webrtc-signal", { signal, from: socket.id });
   });
@@ -127,9 +133,9 @@ function updateUserList(channelId) {
 }
 
 server.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`Server is running securely on port ${port}`);
 });
 
 app.get("/", (req, res) => {
-  res.send("Server is running!");
+  res.send("Secure Server is running!");
 });
