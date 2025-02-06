@@ -152,7 +152,8 @@
         });
 
         socket.on("user-speaking", ({ userId, isSpeaking }) => {
-            console.log(`User ${userId} is ${isSpeaking ? "speaking" : "not speaking"}`);
+            if (isSpeaking)
+                console.log(`User ${userId} is speaking`);
             const userElement = document.getElementById(`user-${userId}`);
             if (userElement) {
                 userElement.style.color = isSpeaking ? "white" : "#6f6f6f";

@@ -23,7 +23,7 @@ const Channel = mongoose.model("Channel", channelSchema);
 // Initialize the Express application
 const app = express();
 app.use(cors({
-  origin: process.env.CLIENT_URL || "*", // Set to a specific domain if required
+  origin: process.env.CLIENT_URL || "*",
   methods: ["GET", "POST"]
 }));
 
