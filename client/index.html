@@ -67,6 +67,7 @@
                 Object.values(peers).forEach(peer => peer.destroy());
                 peers = {};
                 currentChannel = null;
+                document.getElementById("userList").innerHTML = "";
             }
         }
 
