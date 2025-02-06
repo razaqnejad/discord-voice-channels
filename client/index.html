@@ -160,10 +160,19 @@
 
         socket.on("webrtc-signal", ({ signal, from }) => {
             console.log(`Received WebRTC signal from ${from}`);
-            if (!peers[from]) createPeer(from, false);
+
+            if (!peers[from]) {
+                createPeer(from, false);
+            }
+
             if (peers[from] && !peers[from].destroyed) {
                 try {
-                    // if (signal.type === "answer" && peers[from].signalingState !== "have-local-offer") return;
+                    // Prevent setting answer SDP if state is already stable
+                    if (signal.type === "answer" && peers[from].signalingState !== "have-local-offer") {
+                        console.warn(`Ignoring duplicate answer from ${from}`);
+                        return;
+                    }
+
                     peers[from].signal(signal);
                 } catch (err) {
                     console.error(`WebRTC signal error from ${from}:`, err);
