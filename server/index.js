@@ -101,7 +101,7 @@ io.on("connection", (socket) => {
   socket.on("webrtc-signal", (data) => {
     const { signal, to } = data;
     if (!to || !users[to] || users[to] !== users[socket.id]) return;
-    console.log(`Relaying WebRTC signal from ${socket.id} to ${to}`);
+      console.log(`Relaying WebRTC signal from ${socket.id} to ${to}`);
     io.to(to).emit("webrtc-signal", { signal, from: socket.id });
   });
 });
