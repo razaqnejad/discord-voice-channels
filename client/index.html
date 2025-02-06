@@ -28,6 +28,7 @@
 
     <script>
         const SERVER_URL = "wss://discordvoicechannels.onrender.com";
+        // const SERVER_URL = "ws://localhost:10000";
         const socket = io(SERVER_URL, { transports: ["websocket"], upgrade: false });
 
         let peers = {}; 
@@ -128,12 +129,12 @@
                 delete peers[userId]; 
             });
 
-            // peer.on("iceconnectionstatechange", () => {
-            //     console.log(`ICE connection state: ${peer.iceConnectionState}`);
-            //     if (peer.iceConnectionState === 'failed' || peer.iceConnectionState === 'disconnected') {
-            //         console.error(`ICE connection failed or disconnected for peer: ${userId}`);
-            //     }
-            // });
+            peer.on("iceconnectionstatechange", () => {
+                console.log(`ICE connection state: ${peer.iceConnectionState}`);
+                if (peer.iceConnectionState === 'failed' || peer.iceConnectionState === 'disconnected') {
+                    console.error(`ICE connection failed or disconnected for peer: ${userId}`);
+                }
+            });
 
             peers[userId] = peer;
             return peer;
@@ -206,10 +207,10 @@
             }, 300);
         }
 
-        if (window.location.protocol !== "https:") {
-            alert("Please use HTTPS for this application to work properly.");
-            window.location.href = "https://" + window.location.host + window.location.pathname;
-        }
+        // if (window.location.protocol !== "https:") {
+        //     alert("Please use HTTPS for this application to work properly.");
+        //     window.location.href = "https://" + window.location.host + window.location.pathname;
+        // }
 
         navigator.mediaDevices.enumerateDevices().then(devices => {
             console.log("Available devices:", devices);

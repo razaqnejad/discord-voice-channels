@@ -1,11 +1,11 @@
-# استفاده از nginx برای سرو کردن کلاینت
+# Use Nginx as a static server
 FROM nginx:alpine
 
-# کپی کردن فایل‌های کلاینت به مسیر nginx
+# Copy client files to Nginx's HTML directory
 COPY . /usr/share/nginx/html
 
-# پورت پیش‌فرض Nginx
+# Expose port 80
 EXPOSE 80
 
-# اجرای سرور Nginx
+# Run Nginx
 CMD ["nginx", "-g", "daemon off;"]

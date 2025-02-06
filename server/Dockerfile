@@ -1,18 +1,20 @@
-# استفاده از نسخه LTS رسمی Node.js
+# Use an official Node.js runtime as a parent image
 FROM node:18
 
-# تنظیم مسیر کار
+# Set working directory
 WORKDIR /app
 
-# کپی کردن فایل‌های پروژه به داخل کانتینر
-COPY package.json package-lock.json ./
+# Copy package.json and package-lock.json
+COPY package*.json ./
+
+# Install dependencies
 RUN npm install
 
-# کپی کردن بقیه فایل‌های سرور
+# Copy the rest of the application
 COPY . .
 
-# پورت مورد استفاده در کانتینر
-EXPOSE 3000
+# Expose the application port
+EXPOSE 10000
 
-# اجرای سرور
+# Start the application
 CMD ["node", "index.js"]

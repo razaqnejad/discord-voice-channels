@@ -1,18 +1,38 @@
-version: "3.8"
-
 services:
-  server:
-    build: ./server
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./server:/app
+  backend:
+    build:
+      context: ./server
+    container_name: voicechat-server
     restart: always
+    ports:
+      - "10000:10000"
+    depends_on:
+      - mongodb
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/voicechat
+      CLIENT_URL: "*"
+      FORCE_HTTPS: "false"
+      PORT: 10000
 
-  client:
-    build: ./client
+  mongodb:
+    image: mongo:6
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: voicechat
+    volumes:
+      - mongo_data:/data/db
+  
+  frontend:
+    build:
+      context: ./client
+    container_name: voicechat-frontend
+    restart: always
     ports:
       - "8080:80"
-    volumes:
-      - ./client:/usr/share/nginx/html
-    restart: always
+
+
+volumes:
+  mongo_data:
