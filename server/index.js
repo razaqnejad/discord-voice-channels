@@ -1,11 +1,10 @@
 const express = require("express");
-const https = require("https");
-const fs = require("fs");
+const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
 const mongoose = require("mongoose");
 
-const mongoURI = "mongodb+srv://razaqnejad:SH4v51PbgPX15P90@cluster0.zpb4c.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+const mongoURI = process.env.MONGO_URI || "mongodb://localhost:27017/voicechat";
 mongoose.connect(mongoURI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -21,12 +20,12 @@ const channelSchema = new mongoose.Schema({
 const Channel = mongoose.model("Channel", channelSchema);
 
 const app = express();
-
 app.use(cors({
-  origin: process.env.CLIENT_ORIGIN || "https://discord-voicechannels.vercel.app/",
+  origin: "https://discord-voicechannels.vercel.app",
   methods: ["GET", "POST"]
 }));
 
+// Redirect HTTP to HTTPS (ONLY if Render is serving HTTP)
 app.use((req, res, next) => {
   if (req.headers["x-forwarded-proto"] !== "https") {
     return res.redirect("https://" + req.headers.host + req.url);
@@ -34,15 +33,22 @@ app.use((req, res, next) => {
   next();
 });
 
-const server = https.createServer(app);
+// Use HTTP instead of HTTPS
+const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_ORIGIN || "https://discord-voicechannels.vercel.app/",
-    methods: ["GET", "POST"]
+    origin: "https://discord-voicechannels.vercel.app",
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
+// Explicitly listen on `process.env.PORT`
 const port = process.env.PORT || 10000;
+server.listen(port, "0.0.0.0", () => {
+  console.log(`Server is running on port ${port}`);
+});
+
 let users = {};
 
 io.on("connection", (socket) => {
@@ -54,15 +60,11 @@ io.on("connection", (socket) => {
     users[socket.id] = channelId;
     console.log(`User ${socket.id} joined channel ${channelId}`);
 
-    // بروزرسانی دیتابیس
     Channel.findOne({ channelId }).then(channel => {
       if (!channel) {
-        // If channel doesn't exist, create a new channel
         channel = new Channel({ channelId, currentUsers: 1, maxUsers: 1 });
       } else {
-        // Increase the current user count
         channel.currentUsers += 1;
-        // Update maxUsers if currentUsers exceeds maxUsers
         if (channel.currentUsers > channel.maxUsers) {
           channel.maxUsers = channel.currentUsers;
         }
@@ -73,34 +75,12 @@ io.on("connection", (socket) => {
     updateUserList(channelId);
   });
 
-  socket.on("leave-channel", () => {
-    if (!users[socket.id]) return;
-
-    const channelId = users[socket.id];
-    socket.leave(channelId);
-    delete users[socket.id];
-    console.log(`User ${socket.id} left channel ${channelId}`);
-
-    // Update channel data in DB when a user leaves
-    Channel.findOne({ channelId }).then(channel => {
-      if (channel) {
-        channel.currentUsers = Math.max(0, channel.currentUsers - 1); // Ensure currentUsers doesn't go below 0
-        return channel.save();
-      }
-    }).then(() => console.log(`Channel data updated for ${channelId}`))
-      .catch(err => console.error("Error updating channel:", err));
-
-    updateUserList(channelId);
-  });
-
   socket.on("disconnect", () => {
     if (!users[socket.id]) return;
-
     const channelId = users[socket.id];
     delete users[socket.id];
     console.log(`User disconnected: ${socket.id}`);
 
-    // Update channel data in DB when a user disconnects
     Channel.findOne({ channelId }).then(channel => {
       if (channel) {
         channel.currentUsers = Math.max(0, channel.currentUsers - 1);
@@ -137,5 +117,5 @@ server.listen(port, () => {
 });
 
 app.get("/", (req, res) => {
-  res.send("Secure Server is running!");
+  res.send("Server is running!");
 });

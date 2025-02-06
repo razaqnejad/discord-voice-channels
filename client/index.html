@@ -27,7 +27,7 @@
     </div>
 
     <script>
-        const SERVER_URL = "https://discordvoicechannels.onrender.com";
+        const SERVER_URL = "wss://discordvoicechannels.onrender.com";
         const socket = io(SERVER_URL, { transports: ["websocket"], upgrade: false });
 
         let peers = {}; 
