@@ -4,7 +4,7 @@ const { Server } = require("socket.io");
 const cors = require("cors");
 const mongoose = require("mongoose");
 
-const mongoURI = process.env.MONGO_URI || "mongodb://localhost:27017/voicechat";
+const mongoURI = process.env.MONGO_URI;
 mongoose.connect(mongoURI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
