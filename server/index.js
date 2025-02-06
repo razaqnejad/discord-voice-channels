@@ -4,7 +4,6 @@ const { Server } = require("socket.io");
 const cors = require("cors");
 const mongoose = require("mongoose");
 
-// Connect to MongoDB
 const mongoURI = process.env.MONGO_URI || "mongodb://localhost:27017/voicechat";
 mongoose.connect(mongoURI, {
     useNewUrlParser: true,
@@ -12,7 +11,6 @@ mongoose.connect(mongoURI, {
 }).then(() => console.log("Connected to MongoDB"))
 .catch(err => console.error("MongoDB connection error:", err));
 
-// Define the database schema for voice chat channels
 const channelSchema = new mongoose.Schema({
   channelId: String,
   currentUsers: { type: Number, default: 0 },
@@ -20,20 +18,23 @@ const channelSchema = new mongoose.Schema({
 });
 const Channel = mongoose.model("Channel", channelSchema);
 
-// Initialize the Express application
 const app = express();
 app.use(cors({
   origin: process.env.CLIENT_URL || "*",
   methods: ["GET", "POST"]
 }));
 
-// Enable trust proxy for proper HTTPS handling in a hosted environment
 app.set("trust proxy", 1);
 
-// Create an HTTP server
+app.use((req, res, next) => {
+  if (req.secure || process.env.FORCE_HTTPS !== "true") {
+    return next();
+  }
+  res.redirect("https://" + req.headers.host + req.url);
+});
+
 const server = http.createServer(app);
 
-// Configure WebSocket (Socket.io) for real-time communication
 const io = new Server(server, {
   cors: {
     origin: process.env.CLIENT_URL || "*",
@@ -47,20 +48,17 @@ server.listen(port, "0.0.0.0", () => {
   console.log(`Server is running on port ${port}`);
 });
 
-// Store connected users and their respective channels
 let users = {};
 
 io.on("connection", (socket) => {
   console.log(`User connected: ${socket.id}`);
 
-  // Handle user joining a voice chat channel
   socket.on("join-channel", (channelId) => {
     if (!channelId) return;
     socket.join(channelId);
     users[socket.id] = channelId;
     console.log(`User ${socket.id} joined channel ${channelId}`);
 
-    // Update or create the channel in the database
     Channel.findOne({ channelId }).then(channel => {
       if (!channel) {
         channel = new Channel({ channelId, currentUsers: 1, maxUsers: 1 });
@@ -76,14 +74,12 @@ io.on("connection", (socket) => {
     updateUserList(channelId);
   });
 
-  // Handle user disconnection
   socket.on("disconnect", () => {
     if (!users[socket.id]) return;
     const channelId = users[socket.id];
     delete users[socket.id];
     console.log(`User disconnected: ${socket.id}`);
 
-    // Update the channel in the database after user leaves
     Channel.findOne({ channelId }).then(channel => {
       if (channel) {
         channel.currentUsers = Math.max(0, channel.currentUsers - 1);
@@ -94,7 +90,6 @@ io.on("connection", (socket) => {
     updateUserList(channelId);
   });
 
-  // Handle voice activity updates from users
   socket.on("user-speaking", (data) => {
     const channelId = users[socket.id];
     if (!channelId) return;
@@ -102,7 +97,6 @@ io.on("connection", (socket) => {
     io.to(channelId).emit("user-speaking", data);
   });
 
-  // Relay WebRTC signaling messages between peers
   socket.on("webrtc-signal", (data) => {
     const { signal, to } = data;
     if (!to || !users[to] || users[to] !== users[socket.id]) return;
@@ -111,14 +105,12 @@ io.on("connection", (socket) => {
   });
 });
 
-// Function to update the user list for a specific channel
 function updateUserList(channelId) {
   const channelUsers = Object.keys(users).filter((id) => users[id] === channelId);
   console.log(`Updating user list for channel ${channelId}: ${channelUsers}`);
   io.to(channelId).emit("update-users", { channelId, users: channelUsers });
 }
 
-// Basic route to verify if the server is running
 app.get("/", (req, res) => {
   res.send("Server is running!");
 });
