@@ -93,7 +93,8 @@ io.on("connection", (socket) => {
   socket.on("user-speaking", (data) => {
     const channelId = users[socket.id];
     if (!channelId) return;
-    console.log(`User ${data.userId} is ${data.isSpeaking ? "speaking" : "not speaking"}`);
+    if (data.isSpeaking)
+      console.log(`User ${data.userId} is speaking`);
     io.to(channelId).emit("user-speaking", data);
   });
 
