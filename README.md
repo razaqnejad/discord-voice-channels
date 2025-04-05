@@ -2,10 +2,10 @@
 
 This project tries to simulate Discord voice chat system
 
-## Authors
+## Author
 - Fatemeh Reazaqnejad
 - [Gmail](razaqnejad@gmail.com)
-- [GitHub](https://github.com/razaqnejad)
+- [Website](https://razaqnejad.github.io/)
 
 ## Course
 Web Engineering by Dr. Zamaniyan - KNTU
