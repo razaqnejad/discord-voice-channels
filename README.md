@@ -2,8 +2,6 @@
 
 This project tries to simulate Discord voice chat system
 
-**Open Github to see the README images**
-
 ## Authors
 - Fatemeh Reazaqnejad
 - [Gmail](razaqnejad@gmail.com)
