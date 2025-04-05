@@ -1,6 +1,7 @@
 # discord-voice-channels
 
-This project tries to simliate Discord parallel voice chat system
+This project tries to simulate Discord voice chat system
+
 **Open Github to see the README images**
 
 ## Authors
